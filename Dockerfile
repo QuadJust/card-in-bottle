@@ -16,7 +16,10 @@ RUN apt-get update \
       libmecab-dev \
       mecab-ipadic-utf8 \
       git \
-      make
+      make \
+      curl \
+      xz-utils \
+      file
 
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/*
