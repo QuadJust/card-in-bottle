@@ -1,5 +1,6 @@
-bottle==0.12.16
-freeze==1.0.10
-pyfiglet==0.8.post1
-six==1.12.0
-pytesseract==0.2.6
+bottle>=0.12.16
+freeze>=1.0.10
+pyfiglet>=0.8.post1
+six>=1.12.0
+pytesseract>=0.2.6
+mecab-python3>=0.7

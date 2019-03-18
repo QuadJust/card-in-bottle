@@ -6,20 +6,27 @@ FROM ubuntu:18.04
 
 MAINTAINER "Shinri Ishikawa <github:QuadJust>"
 
-RUN apt-get update && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository -y ppa:alex-p/tesseract-ocr
-RUN apt-get update && \
-    apt-get install -y tesseract-ocr-all \
-      wget \
-      python3-distutils
+RUN apt-get update \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:alex-p/tesseract-ocr \
+    && apt-get install -y tesseract-ocr-all \
+      python3-pip \
+      python3-distutils \
+      mecab \
+      libmecab-dev \
+      mecab-ipadic-utf8 \
+      git \
+      make
 
-RUN wget https://bootstrap.pypa.io/get-pip.py && \
-    python3 get-pip.py && \
-    rm get-pip.py
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /home/work
 WORKDIR /home/work
+
+RUN git clone --depth 1 https://github.com/neologd/mecab-ipadic-neologd.git \
+    && cd mecab-ipadic-neologd \
+    && bin/install-mecab-ipadic-neologd -n -y
 
 RUN mkdir app
 COPY app app/
