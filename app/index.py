@@ -1,5 +1,5 @@
 from bottle import Bottle, redirect, run, static_file
-#from util.Ocr import Ocr
+from pyfiglet import Figlet
 from ocr import ocr
 import pytesseract
 
@@ -38,4 +38,7 @@ def sampleOcr():
 
 if __name__ == '__main__':
     # this setting is running for development.
-    run(app=app, host='0.0.0.0',port=8080, reloader=True, debug=True)
+    f = Figlet(font='slant')
+    msg = f.renderText('Card in Bottle')
+    print(msg)
+    run(app=app, host='0.0.0.0',port=8080, debug=True)
