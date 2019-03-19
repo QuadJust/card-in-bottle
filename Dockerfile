@@ -15,11 +15,14 @@ RUN apt-get update \
       mecab \
       libmecab-dev \
       mecab-ipadic-utf8 \
+      swig \
       git \
       make \
       curl \
       xz-utils \
-      file
+      file \
+      sudo \
+      wget 
 
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/*
