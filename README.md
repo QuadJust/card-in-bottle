@@ -1,6 +1,6 @@
 # Card in Bottle
 
-<img src="https://github.com/QuadJust/card-in-bottle/blob/master/README.md" width="250px"/>
+<img src="https://github.com/QuadJust/card-in-bottle/blob/master/Card-in-Bottle.png?branch=master" width="250px"/>
 
 ### Run on dokcer
 
