@@ -1,1 +1,3 @@
-CONST_VER = nil
+import logging
+
+LOG_LEVEL = logging.DEBUG
