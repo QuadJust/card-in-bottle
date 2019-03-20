@@ -1,22 +1,24 @@
 from bottle import Bottle, redirect, request, response, run, static_file
 from pyfiglet import Figlet
 from ocr import Ocr
-from logging import getLogger, StreamHandler, Formatter
 import threading
 import pytesseract
+import logging
+from logging import getLogger, StreamHandler, Formatter
 
 app = Bottle()
 
-# Loggin API call
+# Logging API call
 @app.hook('before_request')
-def logging_call():
+def logging():
     logger = getLogger("API call")
     logger.setLevel(logging.DEBUG)
-    stream_handler = StreamHandler()
+    handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
     stream_handler.setLevel(logging.DEBUG)
     handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     stream_handler.setFormatter(handler_format)
-    logger.debug(equest.environ['PATH_INFO'])
+    logger.addHandler(stream_handler)
+    logger.debug(request.environ['PATH_INFO'])
 
 # Get static file.
 @app.get('/static/<filePath:path>')
@@ -53,19 +55,19 @@ def bzcard():
     img2 = request.files.get('img2', '')
 
     response.headers['result'] = 0
-    response.headers['errmsg'] = """
-    IP:%s\t
-    Pflg:%d\t
-    Corp:%s\t
-    User:%s\t
-    ImgNo:%d\t
-    Cnt:%d\t
-    Lang:%d\t
-    LangChar:%d\t
-    cardtype:%d\t
-    cardou:%d\t
-    ImgQuality:%d\t
-    """ % (ip, pflg, corp, user, imgno, cnt, lang, langchar, cardtype, cardou)
+    response.headers['errmsg'] = \
+    'IP:%s\t' \
+    'Pflg:%s\t' \
+    'Corp:%s\t' \
+    'User:%s\t' \
+    'ImgNo:%s\t' \
+    'Cnt:%s\t' \
+    'Lang:%s\t' \
+    'LangChar:%s\t' \
+    'cardtype:%s\t' \
+    'cardou:%s\t' \
+    'ImgQuality:%s\t' \
+     % (ip, pflg, corp, user, imgno, cnt, lang, langchar, cardtype, cardou, '')
 
     return """
     <h1>Just a moment, please!!</h1>
@@ -79,23 +81,21 @@ def sample():
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/string')
 def sample_string():
-    imgPath = 'sample.png'
     ocr = Ocr()
-    return ocr.to_string(imgPath)
+    return ocr.to_string(imgPath='sample.png')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/hocr')
 def sample_hocr():
-    imgPath = 'sample.png'
     ocr = Ocr()
-    return ocr.to_hocr(imgPath)
+    return ocr.to_hocr(imgPath='sample.png')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/pdf')
 def sample_pdf():
     imgPath = 'sample.png'
     ocr = Ocr()
-    return ocr.to_pdf(imgPath)
+    return ocr.to_pdf(imgPath='sample.png')
 
 # Enable cors
 @app.hook('after_request')

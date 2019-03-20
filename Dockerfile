@@ -22,7 +22,8 @@ RUN apt-get update \
       xz-utils \
       file \
       sudo \
-      wget 
+      wget \
+      vim # for development
 
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/*
