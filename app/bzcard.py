@@ -4,9 +4,8 @@ import logging
 from logging import getLogger, StreamHandler, Formatter
 from cerberus import Validator
 import threading
-import Mecab
-import urllib
-import urllib2
+import MeCab
+import urllib.request
 from ocr import Ocr
 
 # Bzcard class
@@ -92,7 +91,7 @@ class Bzcard(Ocr):
         self.logger = logger
     
     def in_bottle(self, forms, files):
-        self.logger.debug()
+        self.logger.debug(sys._getframe().f_code.co_name + ' start') 
 
         self.result = 1
 
@@ -157,10 +156,11 @@ class Bzcard(Ocr):
         self.result = 0
         #else:
         #    msg = v.errors
-
+        self.logger.debug(sys._getframe().f_code.co_name + ' end')
         return msg
     
     def write_reply(self, forms, files):
+        self.logger.debug(sys._getframe().f_code.co_name + ' start')
         # Post Data
         ip = forms.get('ip') # ipaddress
         corp = forms.get('corp') # corp id
@@ -179,27 +179,29 @@ class Bzcard(Ocr):
         img2 = files.get('img2', '') # ura image
 
         # Create Http Client
+        # ヘッダ設定
+        headers = {
+            'Content-Type', 'application/x-www-form-urlencoded'
+        }
+        # パラメータ設定
         params = {
             'ret': 0,
-            'id': 0,
+            'id': corp,
             'impid': imgno,
-            'userid': user
+            'userid': user,
+            'cnt': 1
         }
-
-
-        params = urllib.urlencode(params)
-
-        req = urllib2.Request(RequestURL)
-        # ヘッダ設定
-        req.add_header('test', 'application/x-www-form-urlencoded')
-        # パラメータ設定
-        req.add_data(params)
-
-        res = urllib2.urlopen(req)
-        r = res.read()
+        # リクエストの生成
+        #req = urllib.request.Request(url, json.dumps(data).encode(), headers)
+        # リクエストの送信
+        #res = urllib.request.urlopen(req)
+        # レスポンスの取得
+        #r = res.read()
         
-        print(r)
-        logger('Result ' + r)
+        #print(r)
+        #self.logger.debug('Result ' + r)
+        
+        self.logger.debug(sys._getframe().f_code.co_name + ' end')
 
         return 
 

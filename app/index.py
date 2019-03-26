@@ -66,19 +66,19 @@ def sample():
 @app.get('/sample-image/ocr/text')
 def sample_string():
     ocr = Ocr()
-    return ocr.to_string(imgPath='sample.png')
+    return ocr.to_string(imgPath='sample.png', lang='eng')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/hocr')
 def sample_hocr():
     ocr = Ocr()
-    return ocr.to_hocr(imgPath='sample.png')
+    return ocr.to_hocr(imgPath='sample.png', lang='eng')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/pdf')
 def sample_pdf():
     ocr = Ocr()
-    return ocr.to_pdf(imgPath='sample.png')
+    return ocr.to_pdf(imgPath='sample.png', lang='eng')
 
 # Enable cors
 @app.hook('after_request')

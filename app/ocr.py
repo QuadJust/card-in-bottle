@@ -19,22 +19,22 @@ class Ocr(object):
         self.logger = logger
 
     # Image > String
-    def to_string(self, imgPath):
+    def to_string(self, imgPath, lang):
         self.logger.debug(sys._getframe().f_code.co_name + ' start')
-        ret = pytesseract.image_to_string(imgPath)
+        ret = pytesseract.image_to_string(imgPath, lang=lang)
         self.logger.debug(sys._getframe().f_code.co_name + ' end')
         return ret
 
     # Image > hOCR
-    def to_hocr(self, imgPath):
+    def to_hocr(self, imgPath, lang):
         self.logger.debug(sys._getframe().f_code.co_name + ' start')
-        ret = pytesseract.image_to_pdf_or_hocr(imgPath, extension='hocr')
+        ret = pytesseract.image_to_pdf_or_hocr(imgPath, lang=lang,extension='hocr')
         self.logger.debug(sys._getframe().f_code.co_name + ' end')
         return ret
 
     # Image > PDF
-    def to_pdf(self, imgPath):
+    def to_pdf(self, imgPath, lang):
         self.logger.debug(sys._getframe().f_code.co_name + ' start')
-        ret = pytesseract.image_to_pdf_or_hocr(imgPath, extension='pdf')
+        ret = pytesseract.image_to_pdf_or_hocr(imgPath, lang=lang, extension='pdf')
         self.logger.debug(sys._getframe().f_code.co_name + ' end')
         return ret
