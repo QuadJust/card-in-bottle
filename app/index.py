@@ -1,10 +1,12 @@
-from bottle import Bottle, redirect, request, response, run, static_file
-from pyfiglet import Figlet
-from ocr import Ocr, BzcardOcr
-import pytesseract
+import sys
 import datetime
+import pytesseract
 import logging
 from logging import getLogger, StreamHandler, Formatter
+from bottle import Bottle, redirect, request, response, run, static_file
+from bzcard import Bzcard
+from ocr import Ocr
+from pyfiglet import Figlet
 
 app = Bottle()
 
@@ -18,7 +20,6 @@ def logging_api():
     handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(handler_format)
     logger.addHandler(handler)
-    logger.debug(request.environ['PATH_INFO'])
 
 # Get static file.
 @app.get('/static/<filePath:path>')
@@ -41,7 +42,7 @@ def bzcard():
     forms = request.forms
     files = request.files
 
-    ocr = BzcardOcr()
+    ocr = Bzcard()
     msg = ocr.in_bottle(forms=forms, files=files)
 
     response.headers['result'] = ocr.result
@@ -76,7 +77,6 @@ def sample_hocr():
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/pdf')
 def sample_pdf():
-    imgPath = 'sample.png'
     ocr = Ocr()
     return ocr.to_pdf(imgPath='sample.png')
 
@@ -95,3 +95,9 @@ if __name__ == '__main__':
         host = '0.0.0.0', 
         port = 8080, 
         debug = True)
+
+if (len(sys.argv) > 1) and (sys.argv[1] == "debug"):
+    import ptvsd
+    print("waiting...")
+    ptvsd.enable_attach("my_secret", address=('0.0.0.0', 8080))
+    ptvsd.wait_for_attach()

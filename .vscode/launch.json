@@ -1,0 +1,10 @@
+{
+    "name": "Attach (Remote Debug)",
+    "type": "python",
+    "request": "attach",
+    "localRoot": "${workspaceRoot}",
+    "remoteRoot": "${workspaceRoot}",
+    "port": 8080,
+    "secret": "my_secret",
+    "host": "localhost"
+}

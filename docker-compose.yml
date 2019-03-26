@@ -1,0 +1,8 @@
+version: '2.1'
+
+services:
+  card-in-bottle:
+    image: card-in-bottle
+    build: .
+    ports:
+      - 8080:8080
