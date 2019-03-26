@@ -138,24 +138,23 @@ class Bzcard(Ocr):
         v = Validator(self.schema)
 
         #if (v.validate(data)):
-            msg = \
-            'IP:%s\t' \
-            'Pflg:%s\t' \
-            'Corp:%s\t' \
-            'User:%s\t' \
-            'ImgNo:%s\t' \
-            'Cnt:%s\t' \
-            'Lang:%s\t' \
-            'LangChar:%s\t' \
-            'cardtype:%s\t' \
-            'cardou:%s\t' \
-            'ImgQuality:%s\t' \
-            % (ip, pflg, corp, user, imgno, cnt, lang, langchar, cardtype, cardou, '0')
-            
-            thread = threading.Thread(target=self.write_reply, args=(forms, files))
-            thread.start()
+        msg = 'IP:%s\t' \
+        'Pflg:%s\t' \
+        'Corp:%s\t' \
+        'User:%s\t' \
+        'ImgNo:%s\t' \
+        'Cnt:%s\t' \
+        'Lang:%s\t' \
+        'LangChar:%s\t' \
+        'cardtype:%s\t' \
+        'cardou:%s\t' \
+        'ImgQuality:%s\t' \
+        % (ip, pflg, corp, user, imgno, cnt, lang, langchar, cardtype, cardou, '0')
+        
+        thread = threading.Thread(target=self.write_reply, args=(forms, files))
+        thread.start()
 
-            self.result = 0
+        self.result = 0
         #else:
         #    msg = v.errors
 
