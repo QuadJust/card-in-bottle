@@ -3,16 +3,17 @@ import datetime
 import logging
 from logging import getLogger, StreamHandler, Formatter
 import pytesseract
+from const import *
 
-# OCR class
+# Optical character recognition/Reader class
 class Ocr(object):
     # Construct
     def __init__(self):
         # Initialize logger
         logger = getLogger('OCR')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(LOG_LEVEL)
         handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(LOG_LEVEL)
         handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(handler_format)
         logger.addHandler(handler)

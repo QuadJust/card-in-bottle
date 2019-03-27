@@ -4,9 +4,9 @@ import logging
 from logging import getLogger, StreamHandler, Formatter
 from cerberus import Validator
 import threading
-import MeCab
 import urllib.request
 from ocr import Ocr
+from const import *
 
 # Bzcard class
 class Bzcard(Ocr):
@@ -82,9 +82,9 @@ class Bzcard(Ocr):
     # Construct
     def __init__(self) :
         logger = getLogger('Bzcard OCR')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(LOG_LEVEL)
         handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(LOG_LEVEL)
         handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(handler_format)
         logger.addHandler(handler)

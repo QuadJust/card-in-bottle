@@ -1,12 +1,13 @@
 import sys
 import datetime
-import pytesseract
 import logging
 from logging import getLogger, StreamHandler, Formatter
 from bottle import Bottle, redirect, request, response, run, static_file
 from bzcard import Bzcard
 from ocr import Ocr
+from ma import Ma
 from pyfiglet import Figlet
+from const import *
 
 app = Bottle()
 
@@ -14,9 +15,9 @@ app = Bottle()
 @app.hook('before_request')
 def logging_api():
     logger = getLogger('API call')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(LOG_LEVEL)
     handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(LOG_LEVEL)
     handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(handler_format)
     logger.addHandler(handler)
@@ -79,6 +80,17 @@ def sample_hocr():
 def sample_pdf():
     ocr = Ocr()
     return ocr.to_pdf(imgPath='sample.png', lang='eng')
+
+# Get sample image throw OCR.
+@app.get('/sample/analyze')
+def sample_pdf():
+    text = request.query.getunicode("text")
+
+    if text is None:
+        text = ''
+
+    ma = Ma()
+    return ma.analyze(text=text)
 
 # Enable cors
 @app.hook('after_request')
