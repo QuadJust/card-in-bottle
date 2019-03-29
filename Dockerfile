@@ -41,6 +41,6 @@ WORKDIR /home/work/app
 
 RUN pip3 --no-cache-dir install -r requirements.txt
 
-CMD ["python3", "index.py", "debug"]
+CMD ["python3", "index.py"]
 
 EXPOSE 8080

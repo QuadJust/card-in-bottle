@@ -1,4 +1,5 @@
 import sys
+import json
 import datetime
 import pandas as pd
 import uuid
@@ -199,8 +200,9 @@ class Bzcard(Ocr, Ma):
                 'img1': img1,
                 'csv': open(tmp_csv, "r+b")
             }
+
             # リクエストの生成
-            req = urllib.request.Request(RequestURL , json.dumps(data).encode(), headers)
+            req = urllib.request.Request(RequestURL , json.dumps(params).encode(), headers)
             # リクエストの送信
             res = urllib.request.urlopen(req)
             # レスポンスの取得
@@ -208,8 +210,8 @@ class Bzcard(Ocr, Ma):
             
             print(r)
             self.logger.debug('Result ' + r)
-        except Exception, e:
-            self.logger.exception()
+        except Exception as e:
+            self.logger.exception(e)
         
         self.logger.debug(sys._getframe().f_code.co_name + ' finished')
 
@@ -220,10 +222,7 @@ class Bzcard(Ocr, Ma):
         # Generate random uuid
         tmp_csv = str(uuid.uuid4()) + '.csv'
         # Create DataFrame
-        df = pd.DataFrame([
-            ["","","マーケティング事業部","","佐藤","サトウ","美咲","ミサキ","","","","","03-0000-0000","","","","","","","","","","e-iuailxxx@xxx.co.p","","www.a-one.oo.jpl","",0,0,0,0,0,"w_18523_0_0_190327124016253.jpg",0]],
-            index=False,
-            encoding='utf-8')
+        df = pd.DataFrame([["","","マーケティング事業部","","佐藤","サトウ","美咲","ミサキ","","","","","03-0000-0000","","","","","","","","","","e-iuailxxx@xxx.co.p","","www.a-one.oo.jpl","",0,0,0,0,0,"w_18523_0_0_190327124016253.jpg",0]])
         df.to_csv(tmp_csv)
         return tmp_csv
 
