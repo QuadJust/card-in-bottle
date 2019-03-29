@@ -198,11 +198,16 @@ class Bzcard(Ocr, Ma):
                 'userid': user,
                 'cnt': 1,
                 'img1': img1,
+            }
+
+            files = {
                 'csv': open(tmp_csv, "r+b")
             }
 
+            data =  json.dumps(params).encode()
+
             # リクエストの生成
-            req = urllib.request.Request(RequestURL , json.dumps(params).encode(), headers)
+            req = urllib.request.Request(RequestURL, data, files=files headers)
             # リクエストの送信
             res = urllib.request.urlopen(req)
             # レスポンスの取得
