@@ -1,15 +1,18 @@
 import sys
 import datetime
+import pandas as pd
+import uuid
 import logging
 from logging import getLogger, StreamHandler, Formatter
 from cerberus import Validator
 import threading
 import urllib.request
 from ocr import Ocr
+from ma import Ma
 from const import *
 
 # Bzcard class
-class Bzcard(Ocr):
+class Bzcard(Ocr, Ma):
     # Validator schema
     schema = {
         'ip': {
@@ -91,7 +94,7 @@ class Bzcard(Ocr):
         self.logger = logger
     
     def in_bottle(self, forms, files):
-        self.logger.debug(sys._getframe().f_code.co_name + ' start') 
+        self.logger.debug(sys._getframe().f_code.co_name + ' called') 
 
         self.result = 1
 
@@ -178,33 +181,50 @@ class Bzcard(Ocr):
         img1 = files.get('img1', '') # omote image
         img2 = files.get('img2', '') # ura image
 
-        # Create Http Client
-        # ヘッダ設定
+        # TODO Generate csv
+        tmp_csv = self.__generate_mock_csv()
+
+        # Create http client
+        # Header settings
         headers = {
             'Content-Type', 'application/x-www-form-urlencoded'
         }
-        # パラメータ設定
+        # Parameters
         params = {
             'ret': 0,
             'id': corp,
             'impid': imgno,
             'userid': user,
-            'cnt': 1
+            'cnt': 1,
+            'img1': img1,
+            'csv': open(tmp_csv, "r+b")
         }
         # リクエストの生成
-        #req = urllib.request.Request(url, json.dumps(data).encode(), headers)
+        req = urllib.request.Request(RequestURL , json.dumps(data).encode(), headers)
         # リクエストの送信
-        #res = urllib.request.urlopen(req)
+        res = urllib.request.urlopen(req)
         # レスポンスの取得
-        #r = res.read()
+        r = res.read()
         
-        #print(r)
-        #self.logger.debug('Result ' + r)
+        print(r)
+        self.logger.debug('Result ' + r)
         
-        self.logger.debug(sys._getframe().f_code.co_name + ' end')
+        self.logger.debug(sys._getframe().f_code.co_name + ' finished')
 
         return 
 
-    def generate_csv(self):
+
+    def __generate_mock_csv(self):
+        # Generate random uuid
+        tmp_csv = str(uuid.uuid4()) + '.csv'
+        # Create DataFrame
+        df = pd.DataFrame([
+            ["","","マーケティング事業部","","佐藤","サトウ","美咲","ミサキ","","","","","03-0000-0000","","","","","","","","","","e-iuailxxx@xxx.co.p","","www.a-one.oo.jpl","",0,0,0,0,0,"w_18523_0_0_190327124016253.jpg",0]],
+            index=False,
+            encoding='utf-8')
+        df.to_csv(tmp_csv)
+        return tmp_csv
+
+    def __generate_csv(self):
 
         return
