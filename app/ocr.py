@@ -1,7 +1,6 @@
 import sys
 import datetime
-import logging
-from logging import getLogger, StreamHandler, Formatter
+from logging import getLogger, StreamHandler, FileHandler, Formatter
 import pytesseract
 from const import *
 
@@ -12,7 +11,7 @@ class Ocr(object):
         # Initialize logger
         logger = getLogger('OCR')
         logger.setLevel(LOG_LEVEL)
-        handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
+        handler = FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
         handler.setLevel(LOG_LEVEL)
         handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(handler_format)

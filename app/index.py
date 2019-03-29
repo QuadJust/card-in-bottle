@@ -1,7 +1,6 @@
 import sys
 import datetime
-import logging
-from logging import getLogger, StreamHandler, Formatter
+from logging import getLogger, StreamHandler, FileHandler, Formatter
 from bottle import Bottle, redirect, request, response, run, static_file
 from bzcard import Bzcard
 from ocr import Ocr
@@ -16,7 +15,7 @@ app = Bottle()
 def logging_api():
     logger = getLogger('API call')
     logger.setLevel(LOG_LEVEL)
-    handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
+    handler = FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
     handler.setLevel(LOG_LEVEL)
     handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(handler_format)

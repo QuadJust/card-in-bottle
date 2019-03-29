@@ -2,8 +2,7 @@ import sys
 import datetime
 import pandas as pd
 import uuid
-import logging
-from logging import getLogger, StreamHandler, Formatter
+from logging import getLogger, StreamHandler, FileHandler, Formatter
 from cerberus import Validator
 import threading
 import urllib.request
@@ -86,7 +85,7 @@ class Bzcard(Ocr, Ma):
     def __init__(self) :
         logger = getLogger('Bzcard OCR')
         logger.setLevel(LOG_LEVEL)
-        handler = logging.FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
+        handler = FileHandler(filename='cib_' + datetime.datetime.today().strftime('%Y%m%d') + '.log')
         handler.setLevel(LOG_LEVEL)
         handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(handler_format)
@@ -181,33 +180,36 @@ class Bzcard(Ocr, Ma):
         img1 = files.get('img1', '') # omote image
         img2 = files.get('img2', '') # ura image
 
-        # TODO Generate csv
-        tmp_csv = self.__generate_mock_csv()
+        try:
+            # TODO Generate csv
+            tmp_csv = self.__generate_mock_csv()
 
-        # Create http client
-        # Header settings
-        headers = {
-            'Content-Type', 'application/x-www-form-urlencoded'
-        }
-        # Parameters
-        params = {
-            'ret': 0,
-            'id': corp,
-            'impid': imgno,
-            'userid': user,
-            'cnt': 1,
-            'img1': img1,
-            'csv': open(tmp_csv, "r+b")
-        }
-        # リクエストの生成
-        req = urllib.request.Request(RequestURL , json.dumps(data).encode(), headers)
-        # リクエストの送信
-        res = urllib.request.urlopen(req)
-        # レスポンスの取得
-        r = res.read()
-        
-        print(r)
-        self.logger.debug('Result ' + r)
+            # Create http client
+            # Header settings
+            headers = {
+                'Content-Type', 'application/x-www-form-urlencoded'
+            }
+            # Parameters
+            params = {
+                'ret': 0,
+                'id': corp,
+                'impid': imgno,
+                'userid': user,
+                'cnt': 1,
+                'img1': img1,
+                'csv': open(tmp_csv, "r+b")
+            }
+            # リクエストの生成
+            req = urllib.request.Request(RequestURL , json.dumps(data).encode(), headers)
+            # リクエストの送信
+            res = urllib.request.urlopen(req)
+            # レスポンスの取得
+            r = res.read()
+            
+            print(r)
+            self.logger.debug('Result ' + r)
+        except Exception, e:
+            self.logger.exception()
         
         self.logger.debug(sys._getframe().f_code.co_name + ' finished')
 
