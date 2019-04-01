@@ -188,7 +188,7 @@ class Bzcard(Ocr, Ma):
             # Create http client
             # Header settings
             headers = {
-                'Content-Type', 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
             # Parameters
             params = {
@@ -210,8 +210,7 @@ class Bzcard(Ocr, Ma):
             # レスポンスの取得
             #r = res.read()
             
-            print(r)
-            self.logger.debug('Result ' + r)
+            print(res)
         except Exception as e:
             print(e)
             self.logger.exception(e)
