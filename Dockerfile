@@ -27,7 +27,6 @@ RUN apt-get update \
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir /home/work
 WORKDIR /home/work
 
 RUN git clone --depth 1 https://github.com/neologd/mecab-ipadic-neologd.git \

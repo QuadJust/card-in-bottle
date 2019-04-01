@@ -6,7 +6,7 @@ import uuid
 from logging import getLogger, StreamHandler, FileHandler, Formatter
 from cerberus import Validator
 import threading
-import urllib.request
+import requests
 from ocr import Ocr
 from ma import Ma
 from const import *
@@ -197,25 +197,23 @@ class Bzcard(Ocr, Ma):
                 'impid': imgno,
                 'userid': user,
                 'cnt': 1,
-                'img1': img1,
+                'img1': img1
             }
-
             files = {
-                'csv': open(tmp_csv, "r+b")
+                'csv': open(tmp_csv, "r+b").read()
             }
-
-            data =  json.dumps(params).encode()
 
             # リクエストの生成
-            req = urllib.request.Request(RequestURL, data, files=files headers)
+            #req = urllib.request.Request(RequestURL, params, files=files, headers=headers)
             # リクエストの送信
-            res = urllib.request.urlopen(req)
+            res = requests.post(RequestURL, params, files=files, headers=headers)
             # レスポンスの取得
-            r = res.read()
+            #r = res.read()
             
             print(r)
             self.logger.debug('Result ' + r)
         except Exception as e:
+            print(e)
             self.logger.exception(e)
         
         self.logger.debug(sys._getframe().f_code.co_name + ' finished')
