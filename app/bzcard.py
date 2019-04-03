@@ -187,26 +187,26 @@ class Bzcard(Ocr, Ma):
 
             # Create http client
             # Header settings
-            headers = {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            #headers = {
+            #    'Content-Type': 'multipart/form-data'
+            #}
             # Parameters
             params = {
                 'ret': 0,
                 'id': corp,
                 'impid': imgno,
                 'userid': user,
-                'cnt': 1,
-                'img1': img1
+                'cnt': 1
             }
             files = {
-                'csv': open(tmp_csv, "r+b").read()
+                'img1': img1.file,
+                'csv': (tmp_csv, open(tmp_csv, "rb").read(), 'text/csv')
             }
 
             # リクエストの生成
             #req = urllib.request.Request(RequestURL, params, files=files, headers=headers)
             # リクエストの送信
-            res = requests.post(RequestURL, params, files=files, headers=headers)
+            res = requests.post(RequestURL, params, files=files)
             # レスポンスの取得
             #r = res.read()
             
@@ -225,7 +225,7 @@ class Bzcard(Ocr, Ma):
         tmp_csv = str(uuid.uuid4()) + '.csv'
         # Create DataFrame
         df = pd.DataFrame([["","","マーケティング事業部","","佐藤","サトウ","美咲","ミサキ","","","","","03-0000-0000","","","","","","","","","","e-iuailxxx@xxx.co.p","","www.a-one.oo.jpl","",0,0,0,0,0,"w_18523_0_0_190327124016253.jpg",0]])
-        df.to_csv(tmp_csv)
+        df.to_csv(tmp_csv, index=False, header=False)
         return tmp_csv
 
     def __generate_csv(self):
