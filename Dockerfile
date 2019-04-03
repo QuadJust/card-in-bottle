@@ -22,6 +22,8 @@ RUN apt-get update \
       file \
       sudo \
       wget \
+      libsm6 \
+      libxext6 \
       vim # for development
 
 RUN apt-get clean \

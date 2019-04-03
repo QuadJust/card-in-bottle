@@ -26,9 +26,12 @@ class Ma(object):
         r = []
 
         for chunk in tagger.parse(text).splitlines()[:-1]:
-            (surface, feature) = chunk.split('\t')
-            # FIXME インデックス固定でいいか確認
-            r.append(feature.split(",")[7])
+            surface, feature = chunk.split('\t')
+            # 翻訳に失敗した場合、テキストをそのまま使用する
+            if len(feature.split(",")) <= 7:
+                r.append(text)
+            else:
+                r.append(feature.split(",")[7])
         
         result = ("".join(r)).strip()
         return result

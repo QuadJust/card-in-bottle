@@ -3,6 +3,7 @@ import json
 import datetime
 import pandas as pd
 import uuid
+import cv2
 from logging import getLogger, StreamHandler, FileHandler, Formatter
 from cerberus import Validator
 import threading
@@ -164,6 +165,7 @@ class Bzcard(Ocr, Ma):
     
     def write_reply(self, forms, files):
         self.logger.debug(sys._getframe().f_code.co_name + ' start')
+        
         # Post Data
         ip = forms.get('ip') # ipaddress
         corp = forms.get('corp') # corp id
@@ -182,8 +184,16 @@ class Bzcard(Ocr, Ma):
         img2 = files.get('img2', '') # ura image
 
         try:
+            # TODO If uploaded zip file
+
+            print("img1:")
+            print(img1)
+
             # TODO Generate csv
-            tmp_csv = self.__generate_mock_csv()
+            file_name = self.__get_file_name(imgno, '0', '0')
+            img1.save(file_name)
+            shape = self.__wide_or_high(file_name)
+            self.__CS020(lang, file_name, shape)
 
             # Create http client
             # Header settings
@@ -199,8 +209,8 @@ class Bzcard(Ocr, Ma):
                 'cnt': 1
             }
             files = {
-                'img1': img1.file,
-                'csv': (tmp_csv, open(tmp_csv, "rb").read(), 'text/csv')
+                'img1': (tmp_csv, open(file_name, "rb").read())
+                'csv': (tmp_csv, open(tmp_csv, "rb").read())
             }
 
             # リクエストの生成
@@ -219,7 +229,7 @@ class Bzcard(Ocr, Ma):
 
         return 
 
-
+    # Generate mock csv file
     def __generate_mock_csv(self):
         # Generate random uuid
         tmp_csv = str(uuid.uuid4()) + '.csv'
@@ -228,6 +238,52 @@ class Bzcard(Ocr, Ma):
         df.to_csv(tmp_csv, index=False, header=False)
         return tmp_csv
 
+    # Generate csv file
     def __generate_csv(self):
+
+        return
+    
+    # Determine and return filename
+    def __get_file_name(self, imgno, index, a_index):
+        my_time = datetime.date.now().strftime('%y%m%d%H%M%S%3N')
+        return '_'.join([imgno, index, a_index, my_time])
+
+    # Determine whether image is High or Wide 
+    def __wide_or_high(self, img_name):
+        quad = cv2.imread(img_name, 0)
+        height, width = quad.shape[:2]
+
+        if height > width:
+            return 'h'
+        else:
+            return 'w'
+    
+    # Alternative CS020
+    def __CS020(self, lang_code, img, shape):
+        # 日本語
+        if lang_code == 1:
+            if shape == 'w':
+                lang = 'jpn'
+            else:
+                lang = 'jpn_vert'
+        # 英語
+        elif lang_code == 2:
+            lang = 'eng'
+        # 中国語
+        elif lang_code == 3:
+            if shape == 'w':
+                lang = 'chi'
+            else:
+                lang = 'chi_vert'
+        # 韓国語
+        elif lang_code == 4:
+            if shape == 'w':
+                lang = 'kor'
+            else:
+                lang = 'kor_vert'
+        else:
+            raise ValueError('Invalid lang code!')
+
+        self.to_hocr(img, lang)
 
         return
