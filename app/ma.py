@@ -44,7 +44,7 @@ class Ma(object):
         for i in range(len(HIRA_TUPPLE)):
             k_to_h_dict[KATA_TUPPLE[i]] = HIRA_TUPPLE[i]
 
-        hiragana = ""
+        hiragana = ''
 
         for i in range(len(katakana)):
             hiragana += k_to_h_dict[katakana[i]]

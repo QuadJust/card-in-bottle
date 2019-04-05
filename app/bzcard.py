@@ -1,13 +1,19 @@
+#!/usr/bin/env python
+#coding:utf-8
+
 import sys
 import json
 import datetime
-import pandas as pd
+import re
 import uuid
 import cv2
-from logging import getLogger, StreamHandler, FileHandler, Formatter
-from cerberus import Validator
-import threading
 import requests
+import threading
+from logging import getLogger, StreamHandler, FileHandler, Formatter
+import pandas as pd
+import xml.etree.ElementTree as ET
+from cerberus import Validator
+
 from ocr import Ocr
 from ma import Ma
 from const import *
@@ -96,9 +102,7 @@ class Bzcard(Ocr, Ma):
     
     def in_bottle(self, forms, files):
         self.logger.debug(sys._getframe().f_code.co_name + ' called') 
-
         self.result = 1
-
         # Post data
         try:
             ip = forms.get('ip') # ipaddress
@@ -190,10 +194,12 @@ class Bzcard(Ocr, Ma):
             print(img1)
 
             # TODO Generate csv
-            file_name = self.__get_file_name(imgno, '0', '0')
+            file_name = self.__get_file_name(imgno, 0, 0)
             img1.save(file_name)
             shape = self.__wide_or_high(file_name)
             self.__CS020(lang, file_name, shape)
+
+            csv = self.__generate_mock_csv()
 
             # Create http client
             # Header settings
@@ -209,7 +215,7 @@ class Bzcard(Ocr, Ma):
                 'cnt': 1
             }
             files = {
-                'img1': (tmp_csv, open(file_name, "rb").read())
+                'img1': (file_name, open(file_name, "rb").read()),
                 'csv': (tmp_csv, open(tmp_csv, "rb").read())
             }
 
@@ -245,8 +251,8 @@ class Bzcard(Ocr, Ma):
     
     # Determine and return filename
     def __get_file_name(self, imgno, index, a_index):
-        my_time = datetime.date.now().strftime('%y%m%d%H%M%S%3N')
-        return '_'.join([imgno, index, a_index, my_time])
+        my_time = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')[:-3]
+        return '_'.join([str(imgno), str(index), str(a_index), my_time])
 
     # Determine whether image is High or Wide 
     def __wide_or_high(self, img_name):
@@ -260,30 +266,171 @@ class Bzcard(Ocr, Ma):
     
     # Alternative CS020
     def __CS020(self, lang_code, img, shape):
-        # 日本語
+        # Determin langage
         if lang_code == 1:
-            if shape == 'w':
-                lang = 'jpn'
-            else:
-                lang = 'jpn_vert'
-        # 英語
+            lang = 'ja'
+            #if shape == 'w':
+            #    lang = 'jpn'
+            #else:
+            #    lang = 'jpn_vert'
         elif lang_code == 2:
-            lang = 'eng'
-        # 中国語
+            lang = 'en'
         elif lang_code == 3:
-            if shape == 'w':
-                lang = 'chi'
-            else:
-                lang = 'chi_vert'
-        # 韓国語
+            lang = 'zh-Hans'
+            #if shape == 'w':
+            #    lang = 'chi'
+            #else:
+            #    lang = 'chi_vert'
         elif lang_code == 4:
-            if shape == 'w':
-                lang = 'kor'
-            else:
-                lang = 'kor_vert'
+            lang = 'ko'
+            #if shape == 'w':
+            #    lang = 'kor'
+            #else:
+            #    lang = 'kor_vert'
         else:
             raise ValueError('Invalid lang code!')
 
-        self.to_hocr(img, lang)
+        self.__ms_cognitive_service(lang)
 
         return
+    
+    # OCR by Tesseract
+    def __tesseract(self, img, lang):
+
+        hocr = self.to_hocr(img, lang)
+        elem = ET.fromstring(hocr)
+
+        # 要素のタグを取得
+        for e in elem.getiterator("body"):
+            if e.items()[0] == 'class' and e.items()[1] == 'ocr_line':
+                for e2 in elem.getiterator():
+                    if e.items()[0] == 'class' and e.items()[1] == 'ocrx_word':
+                        print('')
+
+        return 
+
+     # OCR by MicroSoft Cognitive Service
+    # @see https://docs.microsoft.com/ja-jp/azure/cognitive-services/computer-vision/quickstarts/python-disk
+    # @see https://azure-recipe.kc-cloud.jp/2017/07/cognitive-services-computer-vision-3/
+    def __ms_cognitive_service(self, img, lang):
+        # Read the image into a byte array
+        image_data = open(img, "rb").read()
+
+        # Request headers
+        headers = {
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': COGNITIVE_API_KEY
+        }
+        params = {
+            'language': lang,
+            'detectOrientation ': 'true'
+        }
+        res = requests.post(COGNITIVE_API_URL, headers=headers, params= params, data=image_data)
+        res_data = res.json()
+
+        data = self.__parse_wide_card(res_data)
+
+        ### csvデータ出力 ###
+        # CSVヘッダ情報
+        #output = [["name" + str(j) for j in range(height_top)] + search_words.keys()]
+        output = {}
+        # 行の追加
+        rows = [data[head] if data.get(head) != None else "" for head in output[0]]
+        output.append(rows)
+        # CSV文字列化
+        csv = "\n".join(['"' + '","'.join(row) + '"' for row in output])
+
+        return csv
+
+    def __parse_wide_card(self, res_data):
+        # 対象と検索値の設定
+        search_words = {
+            'company': ['会社'],
+            'mail': ['@', '＠'],
+            'tel': ['tel', 'phone', '電話', '直通'],
+            'fax': ['fax'],
+            'zip': ['〒'],
+            'address': pref,
+            'office': ['事業所'],
+            'building': ['ビル'],
+            'url': ['http', 'www']
+        }
+
+        # 各行のテキスト、高さ抽出
+        lines = [
+            {
+                'height': max([int(word['boundingBox'].split(',')[3]) for word in line['words']]), 
+                'text': ''.join([word['text'] for word in line['words']])
+            } 
+            for reg_i, region in enumerate(res_data['regions']) 
+            for line_i, line in enumerate(region['lines'])
+        ]
+
+        ### 名刺画像内のデータ抽出 ###
+        data = [
+            'company', # 会社名
+            'company_k', # カイシャカナ
+            'affiliation', # 部署名
+            'exetive', # 役職名
+            'fname',
+            'fname_k',
+            'lname',
+            'lname_k',
+            'office'
+            'zip',
+            'address',
+            'building',
+            'tel',
+            'fax',
+            'zip2',
+            'address2',
+            'building2',
+            'tel2',
+            'fax2',
+            'mobile',
+            'mobile2'
+            'mail',
+            'mail2',
+            'url',
+            'url2',
+            'x',
+            'y',
+            'wide',
+            'height',
+            'rotate',
+            'file'
+        ]
+
+        for i, line in enumerate(lines):
+
+            # 設定検索条件に基づいてデータを検索、抽出
+            for key, words in search_words.items():
+                if data.get(key) == None:
+                    data.update({key: ''})
+
+                word_match = re.search('|'.join(words).decode('utf-8'), line['text'].lower())
+                if word_match and data[key] == '':
+                    data[key] = line['text']
+            
+            data.update({'metadata' + str(i): line['text']})
+
+        # TelとFaxが1行になっているものを分割して格納
+        if data['tel'].lower().find('fax') >= 0:
+            tel_arr = data['tel'].lower().split('fax')
+            data['tel'] = tel_arr[0]
+            data['fax'] = tel_arr[1]
+        
+        ### 氏名の抽出 ###
+        # 行高の上位数の設定
+        height_top = 3
+        # 行高の上位
+        name_list = sorted(lines, key=lambda x: x['height'], reverse=True)[:height_top]
+        # 明確に氏名でない項目の削除
+        not_name = [val for key, val in data.items() if key.find('metadata') < 0] # 住所等すでに氏名でないと判明している項目
+        name_list = [name['text'] for name in name_list if name['text'] not in not_name]
+        name_list += [''] * (height_top - len(name_list))
+        data.update({'name' + str(name_i): name for name_i, name in enumerate(name_list)})
+
+        return data
+
+   

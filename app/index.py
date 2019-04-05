@@ -42,8 +42,8 @@ def bzcard():
     forms = request.forms
     files = request.files
 
-    ocr = Bzcard()
-    msg = ocr.in_bottle(forms=forms, files=files)
+    bzcard = Bzcard()
+    msg = bzcard.in_bottle(forms=forms, files=files)
 
     response.headers['result'] = ocr.result
     response.headers['errmsg'] = msg
@@ -57,10 +57,13 @@ def bzcard():
         <h1>Sorry, I'm bussy!!</h1>
         """
 
-# Get sample image.
-@app.get('/cib/sample-image')
+# POST sample image.
+@app.post('/sample/upload')
 def sample():
-    return static_file('sample.png', root='./static')
+    files = request.files
+    print(files)
+    ocr = Ocr()
+    return ocr.to_hocr(imgPath='sample.png', lang='jpn')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/text')
@@ -72,7 +75,7 @@ def sample_string():
 @app.get('/sample-image/ocr/hocr')
 def sample_hocr():
     ocr = Ocr()
-    return ocr.to_hocr(imgPath='sample.png', lang='eng')
+    return ocr.to_hocr(imgPath='sample.png', lang='jpn')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/pdf')

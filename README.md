@@ -6,4 +6,4 @@
 
 ```ducker build -t cib .```
 
-```ducker run -d -t 8080:8080 cib```
+```ducker run -d -t 80:8080 cib```
