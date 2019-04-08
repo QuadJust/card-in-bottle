@@ -45,10 +45,10 @@ def bzcard():
     bzcard = Bzcard()
     msg = bzcard.in_bottle(forms=forms, files=files)
 
-    response.headers['result'] = ocr.result
+    response.headers['result'] = bzcard.result
     response.headers['errmsg'] = msg
 
-    if ocr.result == 0:
+    if bzcard.result == 0:
         return """
         <h1>Just a moment, please!!</h1>
         """

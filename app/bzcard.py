@@ -9,6 +9,7 @@ import uuid
 import cv2
 import requests
 import threading
+import numpy
 from logging import getLogger, StreamHandler, FileHandler, Formatter
 import pandas as pd
 import xml.etree.ElementTree as ET
@@ -188,18 +189,36 @@ class Bzcard(Ocr, Ma):
         img2 = files.get('img2', '') # ura image
 
         try:
-            # TODO If uploaded zip file
-
-            print("img1:")
-            print(img1)
-
             # TODO Generate csv
             file_name = self.__get_file_name(imgno, 0, 0)
             img1.save(file_name)
             shape = self.__wide_or_high(file_name)
-            self.__CS020(lang, file_name, shape)
 
-            csv = self.__generate_mock_csv()
+            # Determin langage
+            if lang == 1:
+                lang_code = 'ja'
+                #if shape == 'w':
+                #    lang = 'jpn'
+                #else:
+                #    lang = 'jpn_vert'
+            elif lang == 2:
+                lang_code = 'en'
+            elif lang == 3:
+                lang_code = 'zh-Hans'
+                #if shape == 'w':
+                #    lang = 'chi'
+                #else:
+                #    lang = 'chi_vert'
+            elif lang == 4:
+                lang_code = 'ko'
+                #if shape == 'w':
+                #    lang = 'kor'
+                #else:
+                #    lang = 'kor_vert'
+            else:
+                raise ValueError('Invalid lang code!')
+
+            csv = self.__ms_cognitive_service(file_name, lang_code)
 
             # Create http client
             # Header settings
@@ -215,8 +234,8 @@ class Bzcard(Ocr, Ma):
                 'cnt': 1
             }
             files = {
-                'img1': (file_name, open(file_name, "rb").read()),
-                'csv': (tmp_csv, open(tmp_csv, "rb").read())
+                'img1': img1.file,
+                'csv': csv
             }
 
             # リクエストの生成
@@ -252,7 +271,7 @@ class Bzcard(Ocr, Ma):
     # Determine and return filename
     def __get_file_name(self, imgno, index, a_index):
         my_time = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')[:-3]
-        return '_'.join([str(imgno), str(index), str(a_index), my_time])
+        return '_'.join([str(imgno), str(index), str(a_index), my_time]) + '.jpg'
 
     # Determine whether image is High or Wide 
     def __wide_or_high(self, img_name):
@@ -263,36 +282,6 @@ class Bzcard(Ocr, Ma):
             return 'h'
         else:
             return 'w'
-    
-    # Alternative CS020
-    def __CS020(self, lang_code, img, shape):
-        # Determin langage
-        if lang_code == 1:
-            lang = 'ja'
-            #if shape == 'w':
-            #    lang = 'jpn'
-            #else:
-            #    lang = 'jpn_vert'
-        elif lang_code == 2:
-            lang = 'en'
-        elif lang_code == 3:
-            lang = 'zh-Hans'
-            #if shape == 'w':
-            #    lang = 'chi'
-            #else:
-            #    lang = 'chi_vert'
-        elif lang_code == 4:
-            lang = 'ko'
-            #if shape == 'w':
-            #    lang = 'kor'
-            #else:
-            #    lang = 'kor_vert'
-        else:
-            raise ValueError('Invalid lang code!')
-
-        self.__ms_cognitive_service(lang)
-
-        return
     
     # OCR by Tesseract
     def __tesseract(self, img, lang):
@@ -318,7 +307,7 @@ class Bzcard(Ocr, Ma):
 
         # Request headers
         headers = {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/octet-stream',
             'Ocp-Apim-Subscription-Key': COGNITIVE_API_KEY
         }
         params = {
@@ -333,13 +322,14 @@ class Bzcard(Ocr, Ma):
         ### csvデータ出力 ###
         # CSVヘッダ情報
         #output = [["name" + str(j) for j in range(height_top)] + search_words.keys()]
-        output = {}
+        #output = {}
         # 行の追加
-        rows = [data[head] if data.get(head) != None else "" for head in output[0]]
-        output.append(rows)
+        #rows = [data[head] if data.get(head) != None else "" for head in output[0]]
+        #output.append(rows)
         # CSV文字列化
-        csv = "\n".join(['"' + '","'.join(row) + '"' for row in output])
-
+        #csv = "\n".join(['"' + '","'.join(row) + '"' for row in data])
+        csv = '"' + '","'.join(data)
+        
         return csv
 
     def __parse_wide_card(self, res_data):
@@ -350,7 +340,7 @@ class Bzcard(Ocr, Ma):
             'tel': ['tel', 'phone', '電話', '直通'],
             'fax': ['fax'],
             'zip': ['〒'],
-            'address': pref,
+            'address': PREF_TUPPLE,
             'office': ['事業所'],
             'building': ['ビル'],
             'url': ['http', 'www']
@@ -359,6 +349,9 @@ class Bzcard(Ocr, Ma):
         # 各行のテキスト、高さ抽出
         lines = [
             {
+                'left': max([int(word['boundingBox'].split(',')[0]) for word in line['words']]), 
+                'top': max([int(word['boundingBox'].split(',')[1]) for word in line['words']]), 
+                'width': max([int(word['boundingBox'].split(',')[2]) for word in line['words']]),
                 'height': max([int(word['boundingBox'].split(',')[3]) for word in line['words']]), 
                 'text': ''.join([word['text'] for word in line['words']])
             } 
@@ -366,53 +359,66 @@ class Bzcard(Ocr, Ma):
             for line_i, line in enumerate(region['lines'])
         ]
 
+        print("lines : ")
+        print(lines)
+
         ### 名刺画像内のデータ抽出 ###
-        data = [
-            'company', # 会社名
-            'company_k', # カイシャカナ
-            'affiliation', # 部署名
-            'exetive', # 役職名
-            'fname',
-            'fname_k',
-            'lname',
-            'lname_k',
-            'office'
-            'zip',
-            'address',
-            'building',
-            'tel',
-            'fax',
-            'zip2',
-            'address2',
-            'building2',
-            'tel2',
-            'fax2',
-            'mobile',
-            'mobile2'
-            'mail',
-            'mail2',
-            'url',
-            'url2',
-            'x',
-            'y',
-            'wide',
-            'height',
-            'rotate',
-            'file'
-        ]
+        data = {
+            'company': '', # 会社名
+            'company_k': '', # カイシャカナ
+            'affiliation': '', # 部署名
+            'exetive': '', # 役職名
+            'fname': '',
+            'fname_k': '',
+            'lname': '',
+            'lname_k': '',
+            'office': '',
+            'zip': '',
+            'address': '',
+            'building': '',
+            'tel': '',
+            'fax': '',
+            'zip2': '',
+            'address2': '',
+            'building2': '',
+            'tel2': '',
+            'fax2': '',
+            'mobile': '',
+            'mobile2': '',
+            'mail': '',
+            'mail2': '',
+            'url': '',
+            'url2': '',
+            'x': '0',
+            'y': '0',
+            'wide': '0',
+            'height': '0',
+            'rotate': '0',
+            'file': '',
+            'ou': '0'
+        }
+
+        # Make sys.maxsize the biggest int
+        min_top = sys.maxsize
+        max_top = 0
 
         for i, line in enumerate(lines):
-
             # 設定検索条件に基づいてデータを検索、抽出
             for key, words in search_words.items():
                 if data.get(key) == None:
                     data.update({key: ''})
 
-                word_match = re.search('|'.join(words).decode('utf-8'), line['text'].lower())
+                word_match = re.search('|'.join(words), line['text'].lower())
                 if word_match and data[key] == '':
                     data[key] = line['text']
+
+                if min_top > line['top']:
+                    min_top = line['top']
+
+                if max_top < line['top']:
+                    max_top = line['top']
             
-            data.update({'metadata' + str(i): line['text']})
+            #data.update({'metadata' + str(i): line['text']})
 
         # TelとFaxが1行になっているものを分割して格納
         if data['tel'].lower().find('fax') >= 0:
@@ -423,14 +429,18 @@ class Bzcard(Ocr, Ma):
         ### 氏名の抽出 ###
         # 行高の上位数の設定
         height_top = 3
-        # 行高の上位
+        # 行高の上位抽出
         name_list = sorted(lines, key=lambda x: x['height'], reverse=True)[:height_top]
         # 明確に氏名でない項目の削除
-        not_name = [val for key, val in data.items() if key.find('metadata') < 0] # 住所等すでに氏名でないと判明している項目
-        name_list = [name['text'] for name in name_list if name['text'] not in not_name]
-        name_list += [''] * (height_top - len(name_list))
-        data.update({'name' + str(name_i): name for name_i, name in enumerate(name_list)})
+        avg_top = (max_top + max_top) / 2
 
-        return data
+        idx = numpy.abs(numpy.asarray(list(map(lambda x: x['top'], lines))) - avg_top).argmin()
+        name = lines[idx]
+        #not_name = [val for key, val in data.items() if key.find('metadata') < 0] # 住所等すでに氏名でないと判明している項目
+        #name_list = [name['text'] for name in name_list if name['text'] not in not_name]
+        #name_list += [''] * (height_top - len(name_list))
+        #data.update({'name' + str(name_i): name for name_i, name in enumerate(name_list)})
+
+        return data.values()
 
    

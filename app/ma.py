@@ -36,6 +36,23 @@ class Ma(object):
         result = ("".join(r)).strip()
         return result
     
+    # Analyze Morpheme
+    # @see https://qiita.com/Hirai0827/items/917d324f3f4d2b7d3134
+    def analyze_name(self, text):
+        tagger = MeCab.Tagger('-d ' + MECAB_IPADIC_PATH)
+        r = []
+
+        for chunk in tagger.parse(text).splitlines()[:-1]:
+            surface, feature = chunk.split('\t')
+            # 翻訳に失敗した場合、テキストをそのまま使用する
+            if len(feature.split(",")) <= 7:
+                r.append(text)
+            else:
+                r.append(feature.split(",")[7])
+        
+        result = ("".join(r)).strip()
+        return result
+    
     # Convert Katakana to Hiragana
     # @see https://qiita.com/Hirai0827/items/917d324f3f4d2b7d3134
     def convert_kata_to_hira(self, katakana):
