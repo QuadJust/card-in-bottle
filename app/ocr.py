@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+#coding:utf-8
+
 import sys
 import datetime
 from logging import getLogger, StreamHandler, FileHandler, Formatter
@@ -28,7 +31,7 @@ class Ocr(object):
     # Image > hOCR
     def to_hocr(self, imgPath, lang):
         self.logger.debug(sys._getframe().f_code.co_name + ' start')
-        ret = pytesseract.image_to_pdf_or_hocr(imgPath, lang=lang,extension='hocr')
+        ret = pytesseract.image_to_pdf_or_hocr(imgPath, lang=lang, extension='hocr')
         self.logger.debug(sys._getframe().f_code.co_name + ' end')
         return ret
 
@@ -36,5 +39,19 @@ class Ocr(object):
     def to_pdf(self, imgPath, lang):
         self.logger.debug(sys._getframe().f_code.co_name + ' start')
         ret = pytesseract.image_to_pdf_or_hocr(imgPath, lang=lang, extension='pdf')
+        self.logger.debug(sys._getframe().f_code.co_name + ' end')
+        return ret
+    
+    # Image > boxes
+    def to_boxes(self, imgPath, lang):
+        self.logger.debug(sys._getframe().f_code.co_name + ' start')
+        ret = pytesseract.image_to_boxes(imgPath, lang=lang)
+        self.logger.debug(sys._getframe().f_code.co_name + ' end')
+        return ret
+
+    # Image > tsv
+    def to_tsv(self, imgPath, lang):
+        self.logger.debug(sys._getframe().f_code.co_name + ' start')
+        ret = pytesseract.image_to_data(imgPath, lang=lang, config='--psm 6')
         self.logger.debug(sys._getframe().f_code.co_name + ' end')
         return ret

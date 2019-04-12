@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+#coding:utf-8
+
 import sys
 import datetime
 import logging
@@ -18,10 +21,56 @@ class Ma(object):
         handler.setFormatter(handler_format)
         logger.addHandler(handler)
         self.logger = logger
-    
+
     # Analyze Morpheme
     # @see https://qiita.com/Hirai0827/items/917d324f3f4d2b7d3134
     def analyze(self, text):
+        tagger = MeCab.Tagger('-d ' + MECAB_IPADIC_PATH)
+
+        return tagger.parse(text)
+    
+    # Analyze Morpheme
+    # @see https://qiita.com/Hirai0827/items/917d324f3f4d2b7d3134
+    def analyze_wakati(self, text):
+        tagger = MeCab.Tagger('-Owakati')
+
+        return tagger.parse(text)
+    
+    # Analyze Morpheme
+    # @see https://qiita.com/Hirai0827/items/917d324f3f4d2b7d3134
+    def analyze_list(self, text):
+        result = []
+
+        wakati_text = self.analyze_wakati(text)
+        tagger = MeCab.Tagger('-d' + MECAB_IPADIC_PATH)
+
+        for c1 in wakati_text.split(' '):
+            for c2 in tagger.parse(c1).splitlines()[:-1]:
+                line = {}
+                surface, feature = c2.split('\t')
+                features = feature.split(",")
+
+                line['surface'] = surface
+                if len(features) > 7:
+                    line['pos'] = features[0]
+                    line['pos_type1'] = features[1]
+                    line['pos_type2'] = features[2]
+                    line['pos_type3'] = features[3]
+                    line['kata'] = features[7]
+                else:
+                    line['pos'] = ''
+                    line['pos_type1'] = ''
+                    line['pos_type2'] = ''
+                    line['pos_type3'] = ''
+                    line['kata'] = ''
+
+                result.append(line)
+
+        return result
+    
+    # Analyze Morpheme
+    # @see https://qiita.com/Hirai0827/items/917d324f3f4d2b7d3134
+    def analyze_kana(self, text):
         tagger = MeCab.Tagger('-d ' + MECAB_IPADIC_PATH)
         r = []
 

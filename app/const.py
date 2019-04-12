@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+#coding:utf-8
+
 import logging
 
 # Logging level
@@ -13,7 +16,7 @@ KATA_TUPPLE = ('ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ'
 #
 COGNITIVE_API_URL = 'https://westcentralus.api.cognitive.microsoft.com/vision/v2.0/ocr'
 #
-COGNITIVE_API_KEY = '98b2cb0cfc2d44af99d1ab64170412d1'
+COGNITIVE_API_KEY = '7f659cdd87214fef9d0b5398060f71bf'
 
 PREF_TUPPLE = (
     '北海道', '青森県', '岩手県', '宮城県', '秋田県', 

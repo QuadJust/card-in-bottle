@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+#coding:utf-8
+
 import sys
 import datetime
 from logging import getLogger, StreamHandler, FileHandler, Formatter
@@ -69,7 +72,7 @@ def sample():
 @app.get('/sample-image/ocr/text')
 def sample_string():
     ocr = Ocr()
-    return ocr.to_string(imgPath='sample.png', lang='eng')
+    return ocr.to_string(imgPath='sample.png', lang='jpn')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/hocr')
@@ -77,11 +80,23 @@ def sample_hocr():
     ocr = Ocr()
     return ocr.to_hocr(imgPath='sample.png', lang='jpn')
 
+# Get sample image throw boxes.
+@app.get('/sample-image/ocr/boxes')
+def sample_boxes():
+    ocr = Ocr()
+    return ocr.to_boxes(imgPath='sample.png', lang='jpn')
+
+# Get sample image throw tsv.
+@app.get('/sample-image/ocr/tsv')
+def sample_tsv():
+    ocr = Ocr()
+    return ocr.to_tsv(imgPath='sample.png', lang='jpn')
+
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/pdf')
 def sample_pdf():
     ocr = Ocr()
-    return ocr.to_pdf(imgPath='sample.png', lang='eng')
+    return ocr.to_pdf(imgPath='sample.png', lang='jpn')
 
 # Get sample image throw OCR.
 @app.get('/sample/analyze')
