@@ -487,8 +487,13 @@ class Bzcard(Ocr, Ma):
                     data['fname_k'] = f_l_name_k[0]
 
         # 名前候補で別の重要項目を埋める
-        for part in name_list:
+        for line in name_list:
             if data['company'] == '':
+                data['company'] = line['text']
+                data['company_k'] = self.analyze_kana(line['text'])
+
+            # TODO
+
 
 
         #not_name = [val for key, val in data.items() if key.find('metadata') < 0] # 住所等すでに氏名でないと判明している項目
