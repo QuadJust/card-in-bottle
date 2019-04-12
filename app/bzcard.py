@@ -461,7 +461,7 @@ class Bzcard(Ocr, Ma):
         name_list = sorted(lines, key=lambda x: x['height'], reverse=True)[:height_top]
 
         idx = numpy.abs(numpy.asarray([row['top'] for row in reversed(name_list)]) - m_height).argmin()
-        name = lines.pop(idx)['text']
+        name = name_list.pop(idx)['text']
 
         for part in self.analyze_list(name):
             if part['pos_type2'] == '人名' and part['pos_type3'] == '姓':
