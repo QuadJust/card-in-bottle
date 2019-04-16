@@ -17,8 +17,10 @@ KATA_TUPPLE = ('ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ'
 COGNITIVE_API_URL = 'https://westcentralus.api.cognitive.microsoft.com/vision/v2.0/ocr'
 #
 COGNITIVE_API_KEY = '7f659cdd87214fef9d0b5398060f71bf'
-
-PREF_TUPPLE = (
+# Tupple of company form
+JP_COMPANY_FORM_TUPPLE = ('株式会社','合同会社', '合資会社', '合名会社', '有限会社')
+# 
+JP_PREF_TUPPLE = (
     '北海道', '青森県', '岩手県', '宮城県', '秋田県', 
     '山形県', '福島県', '茨城県', '栃木県', '群馬県', 
     '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', 

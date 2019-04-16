@@ -77,9 +77,7 @@ class Ma(object):
         for chunk in tagger.parse(text).splitlines()[:-1]:
             surface, feature = chunk.split('\t')
             # 翻訳に失敗した場合、テキストをそのまま使用する
-            if len(feature.split(",")) <= 7:
-                r.append(text)
-            else:
+            if len(feature.split(",")) > 7:
                 r.append(feature.split(",")[7])
         
         result = ("".join(r)).strip()
@@ -94,9 +92,7 @@ class Ma(object):
         for chunk in tagger.parse(text).splitlines()[:-1]:
             surface, feature = chunk.split('\t')
             # 翻訳に失敗した場合、テキストをそのまま使用する
-            if len(feature.split(",")) <= 7:
-                r.append(text)
-            else:
+            if len(feature.split(",")) > 7:
                 r.append(feature.split(",")[7])
         
         result = ("".join(r)).strip()

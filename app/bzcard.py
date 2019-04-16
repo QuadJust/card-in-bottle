@@ -128,7 +128,6 @@ class Bzcard(Ocr, Ma):
         
         if img1 is None:
             return {'img1': ['null value not allowed']}
-             
 
         # Post data
         data = {
@@ -197,8 +196,7 @@ class Bzcard(Ocr, Ma):
             # Save file
             img1.save(file_name)
             shape = self.__get_shape(open(file_name, 'rb'))
-            send_file_name = shape['code'] + '_' + file_name
-            c = self.__ms_cognitive_service(open(file_name, 'rb'), send_file_name, lang, shape)
+            c = self.__ms_cognitive_service(file_name, lang, shape)
 
             # Create http client
             # Header settings
@@ -214,7 +212,7 @@ class Bzcard(Ocr, Ma):
                 'cnt': 1
             }
             files = {
-                'img1': (send_file_name, open(file_name, 'rb')),
+                'img1': (shape['code'] + '_' + file_name, open(file_name, 'rb')),
                 'csv': c
             }
 
@@ -260,58 +258,83 @@ class Bzcard(Ocr, Ma):
             return {'code': 'w', 'height': height, 'width': width}
     
     # OCR by Tesseract
-    def __tesseract(self, img, lang, shape):
+    def __tesseract(self, file_name, lang, shape):
         # Determin langage
         if lang == 1:
-            if shape == 'w':
+            if shape['code'] == 'w':
                 lang_code = 'jpn'
             else:
                 lang_code = 'jpn_vert'
         elif lang == 2:
             lang_code = 'eng'
         elif lang == 3:
-            if shape == 'w':
+            if shape['code'] == 'w':
                 lang_code = 'chi'
             else:
                 lang_code = 'chi_vert'
         elif lang == 4:
-            if shape == 'w':
+            if shape['code'] == 'w':
                 lang_code = 'kor'
             else:
                 lang_code = 'kor_vert'
         else:
             raise ValueError('Invalid lang code!')
 
-        data = self.to_tsv(img, lang_code)
+        data = self.to_tsv(file_name, lang_code)
 
         # 各行のテキスト、高さ抽出
         lines = []
+        par_num = 999
+        row_text = ''
+        row_left = 0
+        row_top = 0
+        row_width = 0
+        row_height = 0
         for i, tsv in enumerate(csv.DictReader(data.splitlines(), delimiter='\t')):
             if i == 0:
-                line_num = tsv['line_num'] 
+                par_num = int(tsv['par_num'])
+                row_left = int(tsv['left'])
+                row_top = int(tsv['top'])
+                row_width = int(tsv['width'])
+                row_height = int(tsv['height'])
+            if par_num == int(tsv['par_num']):
+                row_text = row_text + tsv['text']
+                row_left = int(tsv['left']) if int(tsv['left']) < row_left else row_left
+                row_top = int(tsv['top']) if int(tsv['top']) < row_left else row_top
+                row_width = int(tsv['width']) if int(tsv['width']) > row_width else row_width
+                row_height = int(tsv['height']) if int(tsv['height']) > row_height else row_height
             else:
-                lines.append(''.join)
+                lines.append({
+                    'left': row_left,
+                    'top': row_top,
+                    'width': row_width,
+                    'height': row_height,
+                    'text': row_text
+                })
+                row_text = tsv['text']
+                par_num = tsv['par_num']
             
-            line_num = tsv['line_num'] 
 
         lines = [
             {
-                'left': tsv['left'], 
-                'top': tsv['top'], 
-                'width': tsv['width'],
-                'height': tsv['height'], 
-                'text': tsv['height'],
+                'left': int(tsv['left']), 
+                'top': int(tsv['top']),
+                'width': int(tsv['width']),
+                'height': int(tsv['height']),
+                'text': tsv['text'],
                 'line_num': tsv['line_num'] 
             } 
             for i, tsv in enumerate(csv.DictReader(data.splitlines(), delimiter='\t'))
         ]
         
-        return 
+        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape)
+        c = '"' + '","'.join(data.values())
+        return c
 
      # OCR by MicroSoft Cognitive Service
     # @see https://docs.microsoft.com/ja-jp/azure/cognitive-services/computer-vision/quickstarts/python-disk
     # @see https://azure-recipe.kc-cloud.jp/2017/07/cognitive-services-computer-vision-3/
-    def __ms_cognitive_service(self, img, filename, lang, shape):
+    def __ms_cognitive_service(self, file_name, lang, shape):
         # Determin langage
         if lang == 1:
             lang_code = 'ja'
@@ -336,7 +359,7 @@ class Bzcard(Ocr, Ma):
             'language': lang_code,
             'detectOrientation ': 'true'
         }
-        res = requests.post(COGNITIVE_API_URL, headers=headers, params= params, data=img)
+        res = requests.post(COGNITIVE_API_URL, headers=headers, params= params, data=open(file_name, 'rb'))
         res_data = res.json()
 
         # TODO 画像の回転
@@ -353,23 +376,12 @@ class Bzcard(Ocr, Ma):
             for reg_i, region in enumerate(res_data['regions']) 
             for line_i, line in enumerate(region['lines'])
         ]
-
-        data = self.__parse_wide_card(lines, filename, (shape['height'] / 2))
-
-        ### csvデータ出力 ###
-        # CSVヘッダ情報
-        #output = [["name" + str(j) for j in range(height_top)] + search_words.keys()]
-        #output = {}
-        # 行の追加
-        #rows = [data[head] if data.get(head) != None else "" for head in output[0]]
-        #output.append(rows)
-        # CSV文字列化
-        #csv = "\n".join(['"' + '","'.join(row) + '"' for row in data])
-        csv = '"' + '","'.join(data.values())
         
-        return csv
+        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape)
+        c = '"' + '","'.join(data.values())
+        return c
 
-    def __parse_wide_card(self, lines, filename, m_height):
+    def __parse_card(self, lines, filename, shape):
         # 対象と検索値の設定
         search_words = {
             'company': ['会社', '公司', 'Co.', 'Ltd.', 'Inc.', 'Corp.'],
@@ -377,7 +389,7 @@ class Bzcard(Ocr, Ma):
             'tel': ['tel', 'phone', '電話', '直通'],
             'fax': ['fax'],
             'zip': ['〒'],
-            'address': PREF_TUPPLE,
+            'address': JP_PREF_TUPPLE,
             'office': ['事業所'],
             'building': ['ビル'],
             'url': ['http', 'www']
@@ -421,6 +433,15 @@ class Bzcard(Ocr, Ma):
             'dummy': '' # FIXME
         }
 
+        if shape['code'] == 'w':
+            direction = 'height'
+            measure = 'top'
+            center = shape[direction] / 2
+        else:
+            direction = 'width'
+            measure = 'left'
+            center = shape[direction] / 2
+
         # Make sys.maxsize the biggest int
         #min_top = sys.maxsize
         #max_top = 0
@@ -455,52 +476,66 @@ class Bzcard(Ocr, Ma):
             data['fax'] = tel_arr[1]
         
         ### 氏名の抽出 ###
-        # 行高の上位数の設定
-        height_top = 3
-        # 行高の上位抽出
-        name_list = sorted(lines, key=lambda x: x['height'], reverse=True)[:height_top]
+        top = 3
+        name_list = sorted(lines, key=lambda x: x[direction], reverse=True)[:top]
+        if len(name_list) > 1:
+            if name_list[0][direction] - name_list[1][direction] >= 10:
+                idx = 0
+            else:
+                idx = numpy.abs(numpy.asarray([row[measure] for row in name_list]) - center).argmin()
+        else:
+            idx = 0
 
-        idx = numpy.abs(numpy.asarray([row['top'] for row in reversed(name_list)]) - m_height).argmin()
-        name = name_list.pop(idx)['text']
-
-        for part in self.analyze_list(name):
-            if part['pos_type2'] == '人名' and part['pos_type3'] == '姓':
-                if data['fname'] == '' and data['fname_k'] == '':
-                    data['fname'] = part['surface']
-                    data['fname_k'] = part['kata']
-                else:
-                    data['lname'] = part['surface']
-                    data['lname_k'] = part['kata']
-            elif part['pos_type2'] == '人名' and part['pos_type3'] == '名':
-                data['lname'] = part['surface']
-                data['lname_k'] = part['kata']
-            elif part['pos_type2'] == '人名' and part['pos_type3'] == '一般':
-                f_l_name = self.analyze_wakati(part['surface']).split(' ')
-                f_l_name_k = self.analyze_wakati(part['kata']).split(' ')
-                if len(f_l_name) >= 2 and f_l_name_k >= 2:
-                    data['fname'] = f_l_name[0]
-                    data['fname_k'] = f_l_name_k[0]
-                    data['lname'] = f_l_name[1]
-                    data['lname_k'] = f_l_name_k[1]
-                else:
-                    data['fname'] = f_l_name[0]
-                    data['fname_k'] = f_l_name_k[0]
+        # リストの解析
+        data['fname'], data['fname_k'], data['lname'], data['lname_k'], idx = self.__find_name(name_list, idx)
+        del name_list[idx]
 
         # 名前候補で別の重要項目を埋める
         for line in name_list:
             if data['company'] == '':
                 data['company'] = line['text']
-                data['company_k'] = self.analyze_kana(line['text'])
+                data['company_k'] = self.analyze_kana(self.__delete_company_form(line['text']))
 
             # TODO
 
-
-
-        #not_name = [val for key, val in data.items() if key.find('metadata') < 0] # 住所等すでに氏名でないと判明している項目
-        #name_list = [name['text'] for name in name_list if name['text'] not in not_name]
-        #name_list += [''] * (height_top - len(name_list))
-        #data.update({'name' + str(name_i): name for name_i, name in enumerate(name_list)})
-
         return data
 
-   
+    def __find_name(self, name_list, idx):
+        name = name_list[idx]['text']
+        # リストの解析
+        fname, fname_k, lname, lname_k = '','', '', ''
+        for part in self.analyze_list(name):
+            
+            if part['pos_type2'] == '人名' and part['pos_type3'] == '姓':
+                if fname == '' and fname_k == '':
+                    fname = part['surface']
+                    fname_k = part['kata']
+                else:
+                    lname = part['surface']
+                    lname_k = part['kata']
+            elif part['pos_type2'] == '人名' and part['pos_type3'] == '名':
+                if lname == '' and lname_k == '':
+                    lname = part['surface']
+                    lname_k = part['kata']
+                else:
+                    fname = part['surface']
+                    fname_k = part['kata']
+            elif part['pos_type2'] == '人名' and part['pos_type3'] == '一般':
+                f_l_name = self.analyze_wakati(part['surface']).split(' ')
+                f_l_name_k = self.analyze_wakati(part['kata']).split(' ')
+                if len(f_l_name) >= 2 and f_l_name_k >= 2:
+                    fname = f_l_name[0]
+                    fname_k = f_l_name_k[0]
+                    lname = f_l_name[1]
+                    lname_k = f_l_name_k[1]
+        
+        if fname == '' and fname_k == '' and lname == '' and lname_k == '' and len(name_list) > (idx + 1):
+            fname, fname_k, lname, lname_k, idx = self.__find_name(name_list, (idx + 1))
+
+        return fname, fname_k, lname, lname_k, idx
+
+    def __delete_company_form(self, company_name):
+        for company_form in JP_COMPANY_FORM_TUPPLE:
+            company_name.strip(company_form)
+        return company_name
+    

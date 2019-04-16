@@ -11,6 +11,9 @@ from ma import Ma
 from pyfiglet import Figlet
 from const import *
 
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 app = Bottle()
 
 # Logging API call
