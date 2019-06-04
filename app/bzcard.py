@@ -104,7 +104,7 @@ class Bzcard(Ocr, Ma):
         logger.addHandler(handler)
         self.logger = logger
     
-    def in_bottle(self, forms, files):
+    def bottle_in(self, forms, files):
         self.logger.debug(sys._getframe().f_code.co_name + ' called') 
         self.result = 1
         # Post data
@@ -160,7 +160,7 @@ class Bzcard(Ocr, Ma):
         'cardou:%s\t' \
         'ImgQuality:%s\t' \
         % (ip, pflg, corp, user, imgno, cnt, lang, langchar, cardtype, cardou, '0')
-        
+        # thread start
         thread = threading.Thread(target=self.write_reply, args=(forms, files))
         thread.start()
 
@@ -196,7 +196,7 @@ class Bzcard(Ocr, Ma):
             # Save file
             img1.save(file_name)
             shape = self.__get_shape(open(file_name, 'rb'))
-            c = self.__ms_cognitive_service(file_name, lang, shape)
+            c = self.__tesseract(file_name, lang, shape)
 
             # Create http client
             # Header settings
@@ -269,9 +269,9 @@ class Bzcard(Ocr, Ma):
             lang_code = 'eng'
         elif lang == 3:
             if shape['code'] == 'w':
-                lang_code = 'chi'
+                lang_code = 'chi_sim'
             else:
-                lang_code = 'chi_vert'
+                lang_code = 'chi_sim_vert'
         elif lang == 4:
             if shape['code'] == 'w':
                 lang_code = 'kor'
@@ -281,7 +281,6 @@ class Bzcard(Ocr, Ma):
             raise ValueError('Invalid lang code!')
 
         data = self.to_tsv(file_name, lang_code)
-
         # 各行のテキスト、高さ抽出
         lines = []
         par_num = 999
@@ -290,6 +289,7 @@ class Bzcard(Ocr, Ma):
         row_top = 0
         row_width = 0
         row_height = 0
+        print(data)
         for i, tsv in enumerate(csv.DictReader(data.splitlines(), delimiter='\t')):
             if i == 0:
                 par_num = int(tsv['par_num'])
@@ -384,7 +384,8 @@ class Bzcard(Ocr, Ma):
     def __parse_card(self, lines, filename, shape):
         # 対象と検索値の設定
         search_words = {
-            'company': ['会社', '公司', 'Co.', 'Ltd.', 'Inc.', 'Corp.'],
+            # 比較時にはlowercaseを使うものとする
+            'company': ['会社', '公司', 'co.', 'ltd.', 'inc.', 'corp.'],
             'mail': ['@', '＠'],
             'tel': ['tel', 'phone', '電話', '直通'],
             'fax': ['fax'],
@@ -401,11 +402,11 @@ class Bzcard(Ocr, Ma):
             'company_k': '', # カイシャカナ
             'affiliation': '', # 部署名
             'exetive': '', # 役職名
-            'fname': '',
-            'fname_k': '',
-            'lname': '',
-            'lname_k': '',
-            'office': '',
+            'fname': '', # 姓
+            'fname_k': '', #　セイカナ
+            'lname': '', # 名
+            'lname_k': '', # メイカナ
+            'office': '', 
             'zip': '',
             'address': '',
             'building': '',
@@ -458,7 +459,7 @@ class Bzcard(Ocr, Ma):
                         data[key] = line['text']
                         if key + '_k' in data:
                             data[key + '_k'] = self.analyze_kana(line['text'])
-                    elif data[key + '2'] == '':
+                    elif (key + '2') in data and data[key + '2'] == '':
                         data[key + '2'] = line['text']
 
                 #if min_top > line['top']:
@@ -502,14 +503,20 @@ class Bzcard(Ocr, Ma):
 
     def __find_name(self, name_list, idx):
         name = name_list[idx]['text']
+        self.logger.debug(name_list)
         # リストの解析
         fname, fname_k, lname, lname_k = '','', '', ''
-        for part in self.analyze_list(name):
+        parts = self.analyze_list(name)
+        for i, part in enumerate( parts):
             
             if part['pos_type2'] == '人名' and part['pos_type3'] == '姓':
                 if fname == '' and fname_k == '':
                     fname = part['surface']
                     fname_k = part['kata']
+                    if i == 0:
+                        fname = ''.join(part[1:]['surface'])
+                        fname_k = ''.join(part[1:]['kata'])
+                        break
                 else:
                     lname = part['surface']
                     lname_k = part['kata']

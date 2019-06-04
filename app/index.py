@@ -44,12 +44,12 @@ def greeting():
 
 # Post BzCard API.
 @app.post('/CS000/CS001P.aspx')
-def bzcard():
+def bzcard_interface():
     forms = request.forms
     files = request.files
 
     bzcard = Bzcard()
-    msg = bzcard.in_bottle(forms=forms, files=files)
+    msg = bzcard.bottle_in(forms=forms, files=files)
 
     response.headers['result'] = bzcard.result
     response.headers['errmsg'] = msg
@@ -68,8 +68,9 @@ def bzcard():
 def sample():
     files = request.files
     print(files)
+    files.get('file').save('file.png', overwrite=True)
     ocr = Ocr()
-    return ocr.to_hocr(imgPath='sample.png', lang='jpn')
+    return ocr.to_hocr(imgPath='file.png', lang='jpn')
 
 # Get sample image throw OCR.
 @app.get('/sample-image/ocr/text')
@@ -125,11 +126,11 @@ if __name__ == '__main__':
     run(
         app = app, 
         host = '0.0.0.0', 
-        port = 8080, 
+        port = 80, 
         debug = True)
 
 if (len(sys.argv) > 1) and (sys.argv[1] == "debug"):
     import ptvsd
     print("waiting...")
-    ptvsd.enable_attach("my_secret", address=('0.0.0.0', 8080))
+    ptvsd.enable_attach("my_secret", address=('0.0.0.0', 5678))
     ptvsd.wait_for_attach()
