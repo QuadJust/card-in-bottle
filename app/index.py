@@ -4,17 +4,18 @@
 import sys
 import datetime
 from logging import getLogger, StreamHandler, FileHandler, Formatter
-from bottle import Bottle, redirect, request, response, run, static_file
+from bottle import Bottle, redirect, request, response, run, static_file, debug
 from bzcard import Bzcard
 from ocr import Ocr
 from ma import Ma
 from pyfiglet import Figlet
 from const import *
 
-import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+#import io
+#sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 app = Bottle()
+debug(True)
 
 # Logging API call
 @app.hook('before_request')
@@ -118,6 +119,12 @@ def sample_pdf():
 def enable_cors():
     response.headers['Access-Control-Allow-Origin'] = '*'
 
+if (len(sys.argv) > 1) and (sys.argv[1] == "debug"):
+    import ptvsd
+    print("waiting...")
+    ptvsd.enable_attach(address=('0.0.0.0', 5678))
+    ptvsd.wait_for_attach()
+
 if __name__ == '__main__':
     # this setting is running for development.
     f = Figlet(font='slant')
@@ -128,9 +135,3 @@ if __name__ == '__main__':
         host = '0.0.0.0', 
         port = 80, 
         debug = True)
-
-if (len(sys.argv) > 1) and (sys.argv[1] == "debug"):
-    import ptvsd
-    print("waiting...")
-    ptvsd.enable_attach("my_secret", address=('0.0.0.0', 5678))
-    ptvsd.wait_for_attach()

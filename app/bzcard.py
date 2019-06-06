@@ -24,6 +24,8 @@ from const import *
 
 # Bzcard class
 class Bzcard(Ocr, Ma):
+    file_format = 'jpg'
+
     # Validator schema
     schema = {
         'ip': {
@@ -194,7 +196,7 @@ class Bzcard(Ocr, Ma):
             # TODO Generate csv
             file_name = self.__get_file_name(imgno, 0, 0)
             # Save file
-            img1.save(file_name)
+            img1.save(file_name, self.file_format)
             shape = self.__get_shape(open(file_name, 'rb'))
             c = self.__tesseract(file_name, lang, shape)
 
@@ -244,13 +246,14 @@ class Bzcard(Ocr, Ma):
     # Determine and return filename
     def __get_file_name(self, imgno, index, a_index):
         my_time = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')[:-3]
-        return '_'.join([str(imgno), str(index), str(a_index), my_time]) + '.jpg'
+        return '_'.join([str(imgno), str(index), str(a_index), my_time]) + '.' + self.file_format
 
     # Determine whether image is High or Wide 
     def __get_shape(self, img):
-        img_numpy = numpy.asarray(bytearray(img.read()), dtype=numpy.uint8)
-        quad = cv2.imdecode(img_numpy, -1)
-        height, width = quad.shape[:2]
+        #img_numpy = numpy.asarray(bytearray(img.read()), dtype=numpy.uint8)
+        #quad = cv2.imdecode(img_numpy, -1)
+        im = Image.open(img.name)
+        width, height = im.size
 
         if height > width:
             return {'code': 'h', 'height': height, 'width': width}
@@ -281,23 +284,28 @@ class Bzcard(Ocr, Ma):
             raise ValueError('Invalid lang code!')
 
         data = self.to_tsv(file_name, lang_code)
+        # FIXME
+        print(data)
+
         # 各行のテキスト、高さ抽出
         lines = []
         par_num = 999
+        line_num = 999
         row_text = ''
         row_left = 0
         row_top = 0
         row_width = 0
         row_height = 0
-        print(data)
+        
         for i, tsv in enumerate(csv.DictReader(data.splitlines(), delimiter='\t')):
             if i == 0:
                 par_num = int(tsv['par_num'])
+                line_num = int(tsv['line_num'])
                 row_left = int(tsv['left'])
                 row_top = int(tsv['top'])
                 row_width = int(tsv['width'])
                 row_height = int(tsv['height'])
-            if par_num == int(tsv['par_num']):
+            if par_num == int(tsv['par_num']) and line_num == int(tsv['line_num']):
                 row_text = row_text + tsv['text']
                 row_left = int(tsv['left']) if int(tsv['left']) < row_left else row_left
                 row_top = int(tsv['top']) if int(tsv['top']) < row_left else row_top
@@ -312,20 +320,23 @@ class Bzcard(Ocr, Ma):
                     'text': row_text
                 })
                 row_text = tsv['text']
-                par_num = tsv['par_num']
-            
-
-        lines = [
-            {
-                'left': int(tsv['left']), 
-                'top': int(tsv['top']),
-                'width': int(tsv['width']),
-                'height': int(tsv['height']),
-                'text': tsv['text'],
-                'line_num': tsv['line_num'] 
-            } 
-            for i, tsv in enumerate(csv.DictReader(data.splitlines(), delimiter='\t'))
-        ]
+                par_num = int(tsv['par_num'])
+                line_num = int(tsv['line_num'])
+                row_left = int(tsv['left'])
+                row_top = int(tsv['top'])
+                row_width = int(tsv['width'])
+                row_height = int(tsv['height'])
+        
+        # Append last row
+        lines.append({
+            'left': row_left,
+            'top': row_top,
+            'width': row_width,
+            'height': row_height,
+            'text': row_text
+        })
+        row_text = tsv['text']
+        par_num = tsv['par_num']
         
         data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape)
         c = '"' + '","'.join(data.values())
@@ -478,7 +489,8 @@ class Bzcard(Ocr, Ma):
         
         ### 氏名の抽出 ###
         top = 3
-        name_list = sorted(lines, key=lambda x: x[direction], reverse=True)[:top]
+        # TODO text=''のものは排除
+        name_list = sorted(filter(lambda x: x['text'] != '', lines), key=lambda x: x[direction], reverse=True)[:top]
         if len(name_list) > 1:
             if name_list[0][direction] - name_list[1][direction] >= 10:
                 idx = 0
