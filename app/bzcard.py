@@ -211,10 +211,11 @@ class Bzcard(Ocr, Ma):
             # When the upload file is zip 
             if file_type == '.zip' or file_type == '.lzh':
                 # Decompression files
+                img1.save(img1.raw_filename)
                 zipfile.ZipFile(img1.raw_filename).extractall(dir_name)
                 # Walk files
                 for x in os.listdir(dir_name):
-                    if os.path.isfile(path + x):
+                    if os.path.isfile(dir_name + x):
                         # Define file name
                         file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
                         # Save file as jpeg file
