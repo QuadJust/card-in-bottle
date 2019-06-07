@@ -12,7 +12,10 @@ import requests
 import threading
 import numpy
 from PIL import Image
+import os
 import io
+import mimetypes
+import zipfile
 from logging import getLogger, StreamHandler, FileHandler, Formatter
 import pandas as pd
 import xml.etree.ElementTree as ET
@@ -183,7 +186,7 @@ class Bzcard(Ocr, Ma):
         lang = int(forms.get('lang')) # language
         langchar = int(forms.get('langchar')) # language character?
         cnt = int(forms.get('cnt')) # card count(fixed 1)
-        imgno = int(forms.get('imgno')) # image number
+        imgno = forms.get('imgno') # image number
         cardtype = int(forms.get('cardtype')) # card type(single or compress)
         cardou = int(forms.get('cardou')) # omote ura
         pflg = int(forms.get('pflg')) # personal flg
@@ -193,12 +196,56 @@ class Bzcard(Ocr, Ma):
         img2 = files.get('img2', '') # ura image
 
         try:
-            # TODO Generate csv
-            file_name = self.__get_file_name(imgno, 0, 0)
-            # Save file
-            img1.save(file_name, self.file_format)
-            shape = self.__get_shape(open(file_name, 'rb'))
-            c = self.__tesseract(file_name, lang, shape)
+            files = {}
+            c = []
+            index = 0
+            a_index = 0
+            current_time = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')[:-3]
+            file_type = os.path.splitext(img1.raw_filename)[1]
+
+            print(file_type)
+
+            dir_name = os.path.join(corp, imgno)
+            os.makedirs(dir_name)
+
+            # When the upload file is zip 
+            if file_type == '.zip' or file_type == '.lzh':
+                # Decompression files
+                zipfile.ZipFile(img1.raw_filename).extractall(dir_name)
+                # Walk files
+                for x in os.listdir(dir_name):
+                    if os.path.isfile(path + x):
+                        # Define file name
+                        file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
+                        # Save file as jpeg file
+                        im = Image.open(os.path.join(root, tempfile))
+                        rgb_im = im.convert('RGB') 
+                        rgb_im.save(file_name)
+                        shape = self.__get_shape(open(file_name, 'rb'))
+                        # OCR
+                        c.append(self.__tesseract(file_name, lang, shape))
+                        files.update({'img' + str(index):  (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
+                        index+=1
+                files.update({'csv': os.linesep.join(c)})
+            elif file_type == '.jpg' or file_type == '.jpeg' or file_type == '.gif' or file_type == '.png' or file_type == '.bmp' or file_type == '.tif' or file_type == '.tiff':
+                images = [img1, img2]
+                for image in images:
+                    if image == '':
+                        break
+                    # Define file name
+                    file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
+                    # Save file as jpeg file
+                    im = Image.open(image.file)
+                    rgb_im = im.convert('RGB') 
+                    rgb_im.save(file_name)
+                    shape = self.__get_shape(open(file_name, 'rb'))
+                    # OCR
+                    c.append(self.__tesseract(file_name, lang, shape))
+                    files.update({'img' + str(a_index): (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
+                    a_index+=1
+                files.update({'csv': os.linesep.join(c)})
+            else:
+                return
 
             # Create http client
             # Header settings
@@ -212,10 +259,6 @@ class Bzcard(Ocr, Ma):
                 'impid': imgno,
                 'userid': user,
                 'cnt': 1
-            }
-            files = {
-                'img1': (shape['code'] + '_' + file_name, open(file_name, 'rb')),
-                'csv': c
             }
 
             # リクエストの生成
@@ -507,7 +550,7 @@ class Bzcard(Ocr, Ma):
         for line in name_list:
             if data['company'] == '':
                 data['company'] = line['text']
-                data['company_k'] = self.analyze_kana(self.__delete_company_form(line['text']))
+                data['company_k'] = self.analyze_kana(self.__trim_company_form(line['text']))
 
             # TODO
 
@@ -519,15 +562,15 @@ class Bzcard(Ocr, Ma):
         # リストの解析
         fname, fname_k, lname, lname_k = '','', '', ''
         parts = self.analyze_list(name)
-        for i, part in enumerate( parts):
+        for i, part in enumerate(parts):
             
             if part['pos_type2'] == '人名' and part['pos_type3'] == '姓':
                 if fname == '' and fname_k == '':
                     fname = part['surface']
                     fname_k = part['kata']
-                    if i == 0:
-                        fname = ''.join(part[1:]['surface'])
-                        fname_k = ''.join(part[1:]['kata'])
+                    if i == 0 and len(parts) > 1:
+                        lname = ''.join(x['surface'] for x in parts[1:])
+                        lname_k = ''.join(x['kata'] for x in parts[1:])
                         break
                 else:
                     lname = part['surface']
@@ -542,7 +585,7 @@ class Bzcard(Ocr, Ma):
             elif part['pos_type2'] == '人名' and part['pos_type3'] == '一般':
                 f_l_name = self.analyze_wakati(part['surface']).split(' ')
                 f_l_name_k = self.analyze_wakati(part['kata']).split(' ')
-                if len(f_l_name) >= 2 and f_l_name_k >= 2:
+                if len(f_l_name) >= 2 and len(f_l_name_k) >= 2:
                     fname = f_l_name[0]
                     fname_k = f_l_name_k[0]
                     lname = f_l_name[1]
@@ -553,7 +596,7 @@ class Bzcard(Ocr, Ma):
 
         return fname, fname_k, lname, lname_k, idx
 
-    def __delete_company_form(self, company_name):
+    def __trim_company_form(self, company_name):
         for company_form in JP_COMPANY_FORM_TUPPLE:
             company_name.strip(company_form)
         return company_name

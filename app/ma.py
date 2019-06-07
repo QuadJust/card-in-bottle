@@ -79,6 +79,8 @@ class Ma(object):
             # 翻訳に失敗した場合、テキストをそのまま使用する
             if len(feature.split(",")) > 7:
                 r.append(feature.split(",")[7])
+            else:
+                r.append(surface)
         
         result = ("".join(r)).strip()
         return result
