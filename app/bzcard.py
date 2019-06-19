@@ -207,6 +207,7 @@ class Bzcard(Ocr, Ma):
 
             dir_name = os.path.join(corp, imgno)
             os.makedirs(dir_name)
+            errmsg = ''
 
             # When the upload file is zip 
             if file_type == '.zip' or file_type == '.lzh':
@@ -215,35 +216,47 @@ class Bzcard(Ocr, Ma):
                 zipfile.ZipFile(img1.raw_filename).extractall(dir_name)
                 # Walk files
                 for x in os.listdir(dir_name):
-                    if os.path.isfile(dir_name + x):
-                        # Define file name
-                        file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
-                        # Save file as jpeg file
-                        im = Image.open(os.path.join(root, tempfile))
-                        rgb_im = im.convert('RGB') 
-                        rgb_im.save(file_name)
-                        shape = self.__get_shape(open(file_name, 'rb'))
-                        # OCR
-                        c.append(self.__tesseract(file_name, lang, shape))
-                        files.update({'img' + str(index):  (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
-                        index+=1
+                    try:
+                        decfile_path = os.path.join(dir_name, x)
+                        if os.path.isfile(decfile_path):
+                            # Define file name
+                            file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
+                            # Save file as jpeg file
+                            im = Image.open(decfile_path)
+                            rgb_im = im.convert('RGB') 
+                            rgb_im.save(file_name)
+                            shape = self.__get_shape(open(file_name, 'rb'))
+                            # OCR
+                            c.append(self.__tesseract(file_name, lang, shape, a_index))
+                            files.update({'img' + str(index):  (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
+                            index += 1
+                            errmsg += 'OK : 1 : ' + x + os.linesep
+                    except Exception as e:
+                        print(e)
+                        self.logger.exception(e)
+                        errmsg += 'NG : 1 : ' + x + os.linesep
                 files.update({'csv': os.linesep.join(c)})
             elif file_type == '.jpg' or file_type == '.jpeg' or file_type == '.gif' or file_type == '.png' or file_type == '.bmp' or file_type == '.tif' or file_type == '.tiff':
                 images = [img1, img2]
                 for image in images:
                     if image == '':
                         break
-                    # Define file name
-                    file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
-                    # Save file as jpeg file
-                    im = Image.open(image.file)
-                    rgb_im = im.convert('RGB') 
-                    rgb_im.save(file_name)
-                    shape = self.__get_shape(open(file_name, 'rb'))
-                    # OCR
-                    c.append(self.__tesseract(file_name, lang, shape))
-                    files.update({'img' + str(a_index): (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
-                    a_index+=1
+                    try:
+                        # Define file name
+                        file_name = '_'.join([imgno, str(index), str(a_index), current_time]) + '.' + self.file_format
+                        # Save file as jpeg file
+                        im = Image.open(image.file)
+                        rgb_im = im.convert('RGB') 
+                        rgb_im.save(file_name)
+                        shape = self.__get_shape(open(file_name, 'rb'))
+                        # OCR
+                        c.append(self.__tesseract(file_name, lang, shape, a_index))
+                        files.update({'img' + str(a_index): (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
+                        a_index+=1
+                    except Exception as e:
+                        print(e)
+                        self.logger.exception(e)
+                        break
                 files.update({'csv': os.linesep.join(c)})
             else:
                 return
@@ -259,7 +272,8 @@ class Bzcard(Ocr, Ma):
                 'id': corp,
                 'impid': imgno,
                 'userid': user,
-                'cnt': 1
+                'cnt': 1,
+                'errmsg': errmsg
             }
 
             # リクエストの生成
@@ -305,7 +319,7 @@ class Bzcard(Ocr, Ma):
             return {'code': 'w', 'height': height, 'width': width}
     
     # OCR by Tesseract
-    def __tesseract(self, file_name, lang, shape):
+    def __tesseract(self, file_name, lang, shape, ou=0):
         # Determin langage
         if lang == 1:
             if shape['code'] == 'w':
@@ -382,14 +396,14 @@ class Bzcard(Ocr, Ma):
         row_text = tsv['text']
         par_num = tsv['par_num']
         
-        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape)
-        c = '"' + '","'.join(data.values())
+        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape, ou)
+        c =  ','.join(map(lambda x: '"' + x + '"' if type(x) is str else str(x), data.values()))
         return c
 
      # OCR by MicroSoft Cognitive Service
     # @see https://docs.microsoft.com/ja-jp/azure/cognitive-services/computer-vision/quickstarts/python-disk
     # @see https://azure-recipe.kc-cloud.jp/2017/07/cognitive-services-computer-vision-3/
-    def __ms_cognitive_service(self, file_name, lang, shape):
+    def __ms_cognitive_service(self, file_name, lang, shape, ou=0):
         # Determin langage
         if lang == 1:
             lang_code = 'ja'
@@ -432,11 +446,11 @@ class Bzcard(Ocr, Ma):
             for line_i, line in enumerate(region['lines'])
         ]
         
-        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape)
-        c = '"' + '","'.join(data.values())
+        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape, ou)
+        c =  ','.join(map(lambda x: '"' + x + '"' if type(x) is str else str(x), data.values()))
         return c
 
-    def __parse_card(self, lines, filename, shape):
+    def __parse_card(self, lines, filename, shape, ou=0):
         # 対象と検索値の設定
         search_words = {
             # 比較時にはlowercaseを使うものとする
@@ -479,14 +493,13 @@ class Bzcard(Ocr, Ma):
             'mail2': '',
             'url': '',
             'url2': '',
-            'x': '0',
-            'y': '0',
-            'wide': '0',
-            'height': '0',
-            'rotate': '0',
+            'x': 0,
+            'y': 0,
+            'wide': 0,
+            'height': 0,
+            'rotate': 0,
             'file': filename,
-            'ou': '0',
-            'dummy': '' # FIXME
+            'ou': ou
         }
 
         if shape['code'] == 'w':
@@ -511,11 +524,15 @@ class Bzcard(Ocr, Ma):
                 word_match = re.search('|'.join(words), line['text'].lower())
                 if word_match:
                     if data[key] == '':
-                        data[key] = line['text']
+                        # 該当文字列の除去
+                        match_string = line['text'].strip(word_match.group(0))
+                        data[key] = match_string
                         if key + '_k' in data:
-                            data[key + '_k'] = self.analyze_kana(line['text'])
+                            if key == 'company':
+                                match_string = self.__trim_company_form(match_string)
+                            data[key + '_k'] = self.analyze_kana(match_string)
                     elif (key + '2') in data and data[key + '2'] == '':
-                        data[key + '2'] = line['text']
+                        data[key + '2'] = line['text'].strip(word_match.group())
 
                 #if min_top > line['top']:
                 #    min_top = line['top']
@@ -599,6 +616,6 @@ class Bzcard(Ocr, Ma):
 
     def __trim_company_form(self, company_name):
         for company_form in JP_COMPANY_FORM_TUPPLE:
-            company_name.strip(company_form)
+           company_name = company_name.strip(company_form)
         return company_name
     
