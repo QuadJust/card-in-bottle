@@ -8,8 +8,15 @@ from logging import getLogger, StreamHandler, Formatter
 import MeCab
 from const import *
 
-# Morphological analysis class 
+__author__ = "Shinri Ishikawa<justlikebussiness@google.com>"
+__status__ = "development"
+__version__ = "0.0.1"
+__date__    = "20 June 2019"
+
 class Ma(object):
+    """
+    Morphological analysis class 
+    """
     # Construct
     def __init__(self):
         # Initialize logger

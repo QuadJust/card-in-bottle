@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 #coding:utf-8
 
+__author__ = "Shinri Ishikawa <justlikebussiness@google.com>"
+__status__ = "development"
+__version__ = "0.0.1"
+__date__    = "20 June 2019"
+
 import logging
 
 # Logging level

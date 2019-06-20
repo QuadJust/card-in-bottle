@@ -24,9 +24,18 @@ from cerberus import Validator
 from ocr import Ocr
 from ma import Ma
 from const import *
+from keystone import Keystone
 
-# Bzcard class
+__author__ = "Shinri Ishikawa <justlikebussiness@google.com>"
+__status__ = "development"
+__version__ = "0.0.1"
+__date__    = "20 June 2019"
+
 class Bzcard(Ocr, Ma):
+    """
+    Bzcard class
+    """
+
     file_format = 'jpg'
 
     # Validator schema
@@ -225,12 +234,13 @@ class Bzcard(Ocr, Ma):
                             im = Image.open(decfile_path)
                             rgb_im = im.convert('RGB') 
                             rgb_im.save(file_name)
-                            shape = self.__get_shape(open(file_name, 'rb'))
+                            size = self.__get_size(open(file_name, 'rb'))
                             # OCR
-                            c.append(self.__tesseract(file_name, lang, shape, a_index))
-                            files.update({'img' + str(index):  (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
+                            c.append(self.__tesseract(file_name, lang, size, a_index))
+                            files.update({'img' + str(index):  (size['code'] + '_' + file_name, open(file_name, 'rb'))})
                             index += 1
-                            errmsg += 'OK : 1 : ' + x + os.linesep
+                            # For japanese mojibake-taisaku
+                            errmsg += 'OK : 1 : ' + x.encode('cp437').decode('cp932') + os.linesep
                     except Exception as e:
                         print(e)
                         self.logger.exception(e)
@@ -248,10 +258,10 @@ class Bzcard(Ocr, Ma):
                         im = Image.open(image.file)
                         rgb_im = im.convert('RGB') 
                         rgb_im.save(file_name)
-                        shape = self.__get_shape(open(file_name, 'rb'))
+                        size = self.__get_size(open(file_name, 'rb'))
                         # OCR
-                        c.append(self.__tesseract(file_name, lang, shape, a_index))
-                        files.update({'img' + str(a_index): (shape['code'] + '_' + file_name, open(file_name, 'rb'))})
+                        c.append(self.__tesseract(file_name, lang, size, a_index))
+                        files.update({'img' + str(a_index): (size['code'] + '_' + file_name, open(file_name, 'rb'))})
                         a_index+=1
                     except Exception as e:
                         print(e)
@@ -307,7 +317,7 @@ class Bzcard(Ocr, Ma):
         return '_'.join([str(imgno), str(index), str(a_index), my_time]) + '.' + self.file_format
 
     # Determine whether image is High or Wide 
-    def __get_shape(self, img):
+    def __get_size(self, img):
         #img_numpy = numpy.asarray(bytearray(img.read()), dtype=numpy.uint8)
         #quad = cv2.imdecode(img_numpy, -1)
         im = Image.open(img.name)
@@ -319,22 +329,22 @@ class Bzcard(Ocr, Ma):
             return {'code': 'w', 'height': height, 'width': width}
     
     # OCR by Tesseract
-    def __tesseract(self, file_name, lang, shape, ou=0):
+    def __tesseract(self, file_name, lang, size, ou=0):
         # Determin langage
         if lang == 1:
-            if shape['code'] == 'w':
+            if size['code'] == 'w':
                 lang_code = 'jpn'
             else:
                 lang_code = 'jpn_vert'
         elif lang == 2:
             lang_code = 'eng'
         elif lang == 3:
-            if shape['code'] == 'w':
+            if size['code'] == 'w':
                 lang_code = 'chi_sim'
             else:
                 lang_code = 'chi_sim_vert'
         elif lang == 4:
-            if shape['code'] == 'w':
+            if size['code'] == 'w':
                 lang_code = 'kor'
             else:
                 lang_code = 'kor_vert'
@@ -396,14 +406,14 @@ class Bzcard(Ocr, Ma):
         row_text = tsv['text']
         par_num = tsv['par_num']
         
-        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape, ou)
+        data = self.__parse_card(lines, size['code'] + '_' + file_name, size, ou)
         c =  ','.join(map(lambda x: '"' + x + '"' if type(x) is str else str(x), data.values()))
         return c
 
      # OCR by MicroSoft Cognitive Service
     # @see https://docs.microsoft.com/ja-jp/azure/cognitive-services/computer-vision/quickstarts/python-disk
     # @see https://azure-recipe.kc-cloud.jp/2017/07/cognitive-services-computer-vision-3/
-    def __ms_cognitive_service(self, file_name, lang, shape, ou=0):
+    def __ms_cognitive_service(self, file_name, lang, size, ou=0):
         # Determin langage
         if lang == 1:
             lang_code = 'ja'
@@ -446,11 +456,11 @@ class Bzcard(Ocr, Ma):
             for line_i, line in enumerate(region['lines'])
         ]
         
-        data = self.__parse_card(lines, shape['code'] + '_' + file_name, shape, ou)
+        data = self.__parse_card(lines, size['code'] + '_' + file_name, size, ou)
         c =  ','.join(map(lambda x: '"' + x + '"' if type(x) is str else str(x), data.values()))
         return c
 
-    def __parse_card(self, lines, filename, shape, ou=0):
+    def __parse_card(self, lines, filename, size, ou=0):
         # 対象と検索値の設定
         search_words = {
             # 比較時にはlowercaseを使うものとする
@@ -502,14 +512,14 @@ class Bzcard(Ocr, Ma):
             'ou': ou
         }
 
-        if shape['code'] == 'w':
+        if size['code'] == 'w':
             direction = 'height'
             measure = 'top'
-            center = shape[direction] / 2
+            center = size[direction] / 2
         else:
             direction = 'width'
             measure = 'left'
-            center = shape[direction] / 2
+            center = size[direction] / 2
 
         # Make sys.maxsize the biggest int
         #min_top = sys.maxsize
@@ -565,7 +575,7 @@ class Bzcard(Ocr, Ma):
         del name_list[idx]
 
         # 名前候補で別の重要項目を埋める
-        for line in name_list:
+        for line in reversed(name_list):
             if data['company'] == '':
                 data['company'] = line['text']
                 data['company_k'] = self.analyze_kana(self.__trim_company_form(line['text']))

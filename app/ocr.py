@@ -7,8 +7,10 @@ from logging import getLogger, StreamHandler, FileHandler, Formatter
 import pytesseract
 from const import *
 
-# Optical character recognition/Reader class
 class Ocr(object):
+    """
+    Optical character recognition/Reader class
+    """
     # Construct
     def __init__(self):
         # Initialize logger
