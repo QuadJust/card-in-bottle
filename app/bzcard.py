@@ -212,8 +212,6 @@ class Bzcard(Ocr, Ma):
             current_time = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')[:-3]
             file_type = os.path.splitext(img1.raw_filename)[1]
 
-            print(file_type)
-
             dir_name = os.path.join(corp, imgno)
             os.makedirs(dir_name)
             errmsg = ''
@@ -223,6 +221,8 @@ class Bzcard(Ocr, Ma):
                 # Decompression files
                 img1.save(img1.raw_filename)
                 zipfile.ZipFile(img1.raw_filename).extractall(dir_name)
+                # Remove original file
+                os.remove(img1.raw_filename)
                 # Walk files
                 for x in os.listdir(dir_name):
                     try:
@@ -245,6 +245,9 @@ class Bzcard(Ocr, Ma):
                         print(e)
                         self.logger.exception(e)
                         errmsg += 'NG : 1 : ' + x + os.linesep
+                    finally:
+                        os.remove(x)
+
                 files.update({'csv': os.linesep.join(c)})
             elif file_type == '.jpg' or file_type == '.jpeg' or file_type == '.gif' or file_type == '.png' or file_type == '.bmp' or file_type == '.tif' or file_type == '.tiff':
                 images = [img1, img2]
@@ -267,6 +270,9 @@ class Bzcard(Ocr, Ma):
                         print(e)
                         self.logger.exception(e)
                         break
+                    finally:
+                        os.remove(image.raw_filename )
+
                 files.update({'csv': os.linesep.join(c)})
             else:
                 return
@@ -332,22 +338,13 @@ class Bzcard(Ocr, Ma):
     def __tesseract(self, file_name, lang, size, ou=0):
         # Determin langage
         if lang == 1:
-            if size['code'] == 'w':
-                lang_code = 'jpn'
-            else:
-                lang_code = 'jpn_vert'
+            lang_code = 'jpn'
         elif lang == 2:
             lang_code = 'eng'
         elif lang == 3:
-            if size['code'] == 'w':
-                lang_code = 'chi_sim'
-            else:
-                lang_code = 'chi_sim_vert'
+            lang_code = 'chi_sim'
         elif lang == 4:
-            if size['code'] == 'w':
-                lang_code = 'kor'
-            else:
-                lang_code = 'kor_vert'
+            lang_code = 'kor'
         else:
             raise ValueError('Invalid lang code!')
 
@@ -410,7 +407,7 @@ class Bzcard(Ocr, Ma):
         c =  ','.join(map(lambda x: '"' + x + '"' if type(x) is str else str(x), data.values()))
         return c
 
-     # OCR by MicroSoft Cognitive Service
+    # OCR by MicroSoft Cognitive Service
     # @see https://docs.microsoft.com/ja-jp/azure/cognitive-services/computer-vision/quickstarts/python-disk
     # @see https://azure-recipe.kc-cloud.jp/2017/07/cognitive-services-computer-vision-3/
     def __ms_cognitive_service(self, file_name, lang, size, ou=0):
@@ -485,31 +482,31 @@ class Bzcard(Ocr, Ma):
             'fname_k': '', #　セイカナ
             'lname': '', # 名
             'lname_k': '', # メイカナ
-            'office': '', 
-            'zip': '',
-            'address': '',
-            'building': '',
-            'tel': '',
-            'fax': '',
-            'office2': '',
-            'zip2': '',
-            'address2': '',
-            'building2': '',
-            'tel2': '',
-            'fax2': '',
-            'mobile': '',
-            'mobile2': '',
-            'mail': '',
-            'mail2': '',
-            'url': '',
-            'url2': '',
-            'x': 0,
-            'y': 0,
-            'wide': 0,
-            'height': 0,
-            'rotate': 0,
-            'file': filename,
-            'ou': ou
+            'office': '', # 事業所
+            'zip': '', # 郵便番号
+            'address': '', # 住所
+            'building': '', # 建物  
+            'tel': '', # 電話番号
+            'fax': '', # FAX
+            'office2': '', # 事業所2
+            'zip2': '', # 郵便番号2
+            'address2': '', # 住所2
+            'building2': '', # 建物2
+            'tel2': '', # 電話番号2
+            'fax2': '', # FAX2
+            'mobile': '', # 携帯電話
+            'mobile2': '', # 携帯電話2
+            'mail': '', # メールアドレス
+            'mail2': '', # メールアドレス2
+            'url': '', # URL
+            'url2': '', # URL2
+            'x': 0, # 固定値
+            'y': 0, # 固定値
+            'wide': 0, # 固定値
+            'height': 0, # 固定値
+            'rotate': 0, # 固定値
+            'file': filename,  # ファイル名
+            'ou': ou # 表裏
         }
 
         if size['code'] == 'w':

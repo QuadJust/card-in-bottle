@@ -12,6 +12,7 @@ class Keystone(object):
     Keystone class
     @see https://qiita.com/hnkyi/items/3ff24ee7c5cc2eda3b37
     """
+    @classmethod
     def rewrite(self, filename):
         # ファイル読込み
         img = cv2.imread(filename)
@@ -30,7 +31,7 @@ class Keystone(object):
             ret, th1 = cv2.threshold(gray, white, 255, cv2.THRESH_BINARY)
 
             # 輪郭抽出
-            image, contours, hierarchy = cv2.findContours(th1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = cv2.findContours(th1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
             # 面積が以下の条件に満たすものを選定
             # 角の数が4つ、1%以上、99%未満
@@ -81,10 +82,25 @@ class Keystone(object):
         src = cv2.imread(filename)
         dst = cv2.warpPerspective(src, M, (max_x, max_y))
 
+        #高さを定義
+        height = dst.shape[0]                         
+        #幅を定義
+        width = dst.shape[1]  
+        #回転の中心を指定                          
+        center = (int(width/2), int(height/2))
+        #回転角を指定
+        angle = 180.0
+        #スケールを指定
+        scale = 1.0
+        #getRotationMatrix2D関数を使用
+        trans = cv2.getRotationMatrix2D(center, angle, scale)
+        #アフィン変換
+        dst = cv2.warpAffine(dst, trans, (width, height))
+
         # 結果出力
         print("Best parameter: white={} (rate={})".format(best_white, best_rate))
-
-        cv2.imwrite("_corrected." + filename, dst)
+        # rewrite
+        cv2.imwrite(filename, dst)
 
         src = cv2.imread(filename)
         cv2.drawContours(src, dict_approx[best_white], -1, (0, 255, 0), 3)
